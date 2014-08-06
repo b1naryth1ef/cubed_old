@@ -6,7 +6,9 @@ import os, fnmatch
 LIBRARIES = []
 
 # Included directories or files
-INCLUDES = []
+INCLUDES = [
+    "src/include/"
+]
 
 # Source files to ignore
 FIGNORES = []
@@ -14,7 +16,7 @@ FIGNORES = []
 # Flags
 FLAGS = []
 
-def find_source_filse(start_dir, ext=[".cpp", ".c"]):
+def find_source_files(start_dir, ext=[".cpp", ".c"]):
     result = []
     for (path, folders, files) in os.walk(start_dir):
         for fname in files:
@@ -25,8 +27,12 @@ def find_source_filse(start_dir, ext=[".cpp", ".c"]):
     return result
 
 def gen_build_command():
-    base = ["g++ -c"]
+    base = ["g++ -w -std=c++11 -o cubed.o"]
     base.append(" ".join(["-I%s" % i for i in INCLUDES]))
     base.append(" ".join(["-l%s" % i for i in LIBRARIES]))
     base.append(" ".join(["-D%s" % i for i in FLAGS]))
+    base.append(" ".join(find_source_files(".")))
     return " ".join(base)
+
+if __name__ == "__main__":
+    os.system(gen_build_command())
