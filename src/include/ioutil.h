@@ -11,6 +11,8 @@ This holds utilities for disk and network IO
 
 namespace ioutil {
 
+typedef std::vector<std::string> vstring;
+
 // Returns true if the file at path file_name exists
 inline bool file_exists(const char *file_name) {
     struct stat buffer;
@@ -20,6 +22,13 @@ inline bool file_exists(const char *file_name) {
 inline std::string join(std::string a, std::string b) {
     return a + "/" + b;
 }
+
+// std::string join_multi(vstring li) {
+//     std::string result;
+//     for ( auto &i : li ) {
+//         result = result + i;
+//     }
+// }
 
 // Multiwriter is a simple class that allows writing to multiple ostream objects at once.
 class MultiWriter {

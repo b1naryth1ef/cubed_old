@@ -4,7 +4,7 @@
 
 using namespace rapidjson;
 
-int SUPPORTED_WORLD_FILE_VERSION = 1;
+static const int SUPPORTED_WORLD_FILE_VERSION = 1;
 
 class WorldFile {
     private:
@@ -14,57 +14,16 @@ class WorldFile {
         std::string name;
         int version;
 
-        WorldFile(std::string dir) {
-            directory = dir;
-        }
+        WorldFile(std::string dir);
 
-        bool open() {
-            fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
+        bool open();
+        bool close();
 
-            if (!fp) {
-                LOG.L("Failed to open world file!");
-                throw Exception("Failed to open world file!");
-            }
+        ~WorldFile();
+};
 
-            // Create a lock for the file, which warns other instances of cubed to not write to
-            //  this world file.
-            int lock_result = flock(fileno(fp), LOCK_EX | LOCK_NB);
-            if (lock_result != 0) {
-                LOG.L("Error getting lock: %i", lock_result);
+class World {
 
-                throw Exception("Error occured getting lock for world file!");
-            }
-
-            // Read the entire json document
-            char readBuffer[65536];
-            FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-            Document d;
-            d.ParseStream(is);
-
-            // Parse the name and version
-            name = d["name"].GetString();
-            version = d["version"].GetInt();
-            LOG.L("Name and version: %s, %i", name.c_str(), version);
-
-            // Check the version is valid
-            if (version < SUPPORTED_WORLD_FILE_VERSION) {
-                throw Exception("World file version is older, would need to convert it!");
-            } else if (version > SUPPORTED_WORLD_FILE_VERSION) {
-                throw Exception("World file version is newer than the supported version,\
-                    this is a fatal error!");
-            }
-        }
-
-        bool close() {}
-
-        ~WorldFile() {
-            if (!fp) { return; }
-
-            // Unlock the file and close it
-            LOG.L("Closing world file %s", name.c_str());
-            flock(fileno(fp), LOCK_UN);
-            fclose(fp);
-        }
 };
 
 class Region {

@@ -19,7 +19,5 @@
 
 #include "log.h"
 
-
-
-// Global logger object
-Log LOG("cubed.log", true);
+static Log LOG("cubed.log", true);
+static int CUBED_VERSION = 1;

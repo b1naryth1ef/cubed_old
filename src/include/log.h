@@ -20,6 +20,10 @@ class Log {
         std::ofstream *file;
         ioutil::MultiWriter mw;
 
+        Log() {
+            mw.add(&std::cout);
+        }
+
         Log(const char* f, bool use_stdout) {
             file = new std::ofstream;
             file->open(f, std::ios::out | std::ios::app);

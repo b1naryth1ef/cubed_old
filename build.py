@@ -35,4 +35,5 @@ def gen_build_command():
     return " ".join(base)
 
 if __name__ == "__main__":
+    print "Building..."
     os.system(gen_build_command())
