@@ -17,6 +17,10 @@ inline bool file_exists(const char *file_name) {
     return (stat (file_name, &buffer) == 0);
 }
 
+inline std::string join(std::string a, std::string b) {
+    return a + "/" + b;
+}
+
 // Multiwriter is a simple class that allows writing to multiple ostream objects at once.
 class MultiWriter {
     private:

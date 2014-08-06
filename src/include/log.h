@@ -7,6 +7,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <exception>
 
 #include <string.h>
 #include <stdarg.h>
@@ -54,5 +55,19 @@ class Log {
 
         ~Log() {
             file->close();
+        }
+};
+
+class Exception: public std::exception {
+    private:
+        std::string err;
+
+        virtual const char* what() const throw() {
+            return this->err.c_str();
+        }
+
+    public:
+        Exception(std::string err) {
+            this->err = err;
         }
 };
