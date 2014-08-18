@@ -27,9 +27,8 @@ Protobuf for both network and on-disk data
 ## World Format
 Directory Structure:
     - world.json (contains name, version, etc)
-    - light.cache
-    - regions/
-        - $UUID.reg (region file which contains a header of )
+    - data.db (contains block data/etc, should be hugenormous)
+    - cache/ (contains block caches)
 
 ### world.json
 Structure:
@@ -37,23 +36,8 @@ Structure:
 {
     "name": "my awesome world",
     "version": 1,
-    "regions": {
-        "$UUID": [x, y, z]
-    }
 }
 ```
-
-### Region Files
-[0,0,0], [0,1,0]
-[1,0,0], [1,1,0]
-...
-[128,0,0],[128,1,0]
-[0,0,1],[0,1,1]
-...
-[0,0,128],[0,1,128]
-[1,0,1],[1,1,1]
-...
-[128,0,128],[128,1,128]
 
 
 # Requirements

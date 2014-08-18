@@ -12,14 +12,6 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 
-class Client {
-    private:
-        std::vector<Channel *> channels;
-        int ep_fd;
-    public:
-        Client();
-};
-
 class Channel {
     public:
         bool connect(std::string addr, int port);
@@ -33,4 +25,12 @@ class UDPChannel: public Channel {
 
 class TCPChannel: public Channel {
 
+};
+
+class Client {
+    private:
+        std::vector<Channel *> channels;
+        int ep_fd;
+    public:
+        Client();
 };

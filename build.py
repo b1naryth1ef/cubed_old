@@ -3,11 +3,13 @@
 import os, fnmatch
 
 # Linked libraries
-LIBRARIES = []
+LIBRARIES = [
+    "sqlite3"
+]
 
 # Included directories or files
 INCLUDES = [
-    "src/include/"
+    "src/include/",
 ]
 
 # Source files to ignore
@@ -28,10 +30,11 @@ def find_source_files(start_dir, ext=[".cpp", ".c"]):
 
 def gen_build_command():
     base = ["g++ -w -std=c++11 -o cubed.o"]
+    base.append(" ".join(find_source_files(".")))
     base.append(" ".join(["-I%s" % i for i in INCLUDES]))
     base.append(" ".join(["-l%s" % i for i in LIBRARIES]))
     base.append(" ".join(["-D%s" % i for i in FLAGS]))
-    base.append(" ".join(find_source_files(".")))
+    base.append("-L/usr/local/lib")
     return " ".join(base)
 
 if __name__ == "__main__":
