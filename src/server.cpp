@@ -29,6 +29,11 @@ void Server::serve_forever() {
     this->net_thread = std::thread(&Server::net_loop, this);
 }
 
+/*
+    It's assumed that everything within this thread has parent access to
+    anything in server. Any other threads should use locks if they need to
+    access things, or queue things to this thread.
+*/
 void Server::main_loop() {
     int tick_diff, time_per_tick = (1.0 / this->tickrate) * 1000;
 
