@@ -53,6 +53,10 @@ class World {
         DB *db;
 
         World(WorldFile *wf);
+        World(std::string path);
+        ~World();
+
+        bool close();
 
         // Checks which blocks are loaded and optionally unloads some
         int tick();

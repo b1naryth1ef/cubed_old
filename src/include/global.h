@@ -7,12 +7,15 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include <chrono>
 
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
 #include <stdint.h>
 #include <sys/file.h>
+#include <signal.h>
+
 
 // Json
 #include "rapidjson/document.h"

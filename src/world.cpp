@@ -29,7 +29,12 @@ bool WorldFile::open() {
     char readBuffer[65536];
     FileReadStream is(fp, readBuffer, sizeof(readBuffer));
     Document d;
-    d.ParseStream(is);
+
+    try {
+        d.ParseStream(is);
+    } catch (std::string e) {
+        throw Exception("Error occured parsing json world file!");
+    }
 
     // Parse the name and version
     name = d["name"].GetString();
@@ -56,7 +61,7 @@ bool WorldFile::open() {
     }
 }
 
-bool WorldFile::create(){
+bool WorldFile::create() {
     // First create blocks database
     int err;
     err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
@@ -84,7 +89,10 @@ bool WorldFile::close() {
     flock(fileno(fp), LOCK_UN);
     fclose(fp);
 
+    LOG.L("Closing db...");
     delete(db);
+
+    LOG.L("Done closing worldfile!");
 
     return true;
 }
@@ -94,22 +102,42 @@ World::World(WorldFile *wf) {
     this->db = wf->db;
 }
 
+World::World(std::string path) {
+    this->wf = new WorldFile(path);
+    this->wf->open();
+    this->db = this->wf->db;
+}
+
+World::~World() {
+    this->close();
+}
+
+bool World::close() {
+    this->wf->close();
+    return true;
+}
+
 bool World::loadBlocks(PointV points) {
     const char *ztail;
     int err;
 
     for (auto i : points) {
-        sqlite3_stmt *res;
+        sqlite3_stmt *stmt;
         char *query;
         sprintf(query, "SELECT * FROM blocks where x=%F AND y=%F AND z=%F", i->x, i->y, i->z);
-        err = sqlite3_prepare_v2(db->db, query, 100, &res, &ztail);
+        err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
 
         if (err != SQLITE_OK) {
             throw Exception("Failed to load block!");
         }
 
-        Block b = Block(res);
-        blocks[i] = &b;
+        int s = sqlite3_step(stmt);
+        if (s == SQLITE_ROW) {
+            Block b = Block(stmt);
+            blocks[i] = &b;
+        } else {
+            throw Exception("Failed to load block!");
+        }
     }
 }
 
