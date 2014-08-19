@@ -5,6 +5,8 @@
 #include <fstream>
 #include <exception>
 #include <map>
+#include <mutex>
+#include <thread>
 
 #include <string.h>
 #include <stdarg.h>

@@ -13,6 +13,10 @@ namespace ioutil {
 
 typedef std::vector<std::string> vstring;
 
+inline bool file_exists(std::string s) {
+    return file_exists(s.c_str());
+}
+
 // Returns true if the file at path file_name exists
 inline bool file_exists(const char *file_name) {
     struct stat buffer;

@@ -1,6 +1,9 @@
 #include "main.h"
 
 int main(int argc, const char* argv[]) {
-    WorldFile w = WorldFile("testworld");
-    w.open();
+    // Load the SQLite3 Module stuff
+    init_db_module();
+
+    Server s("testworld", "Test Server");
+    // s.server_forever();
 }

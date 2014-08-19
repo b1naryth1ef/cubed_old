@@ -46,13 +46,9 @@ bool WorldFile::open() {
 
     // Open the DB, optionally creating it for the first time if it doesnt exist
     std::string dbpath = ioutil::join(this->directory, "data.db");
-    bool createdb = !ioutil::file_exists(dbpath.c_str());
+    bool createdb = !ioutil::file_exists(dbpath);
 
-    // Now attempt to open the database
-    int rc = sqlite3_open(dbpath.c_str(), &db);
-    if (rc) {
-        throw Exception("Failed to open world data file: " + rc);
-    }
+    this->db = new DB(dbpath);
 
     if (createdb) {
         LOG.L("Creating database for first time...");
@@ -63,7 +59,7 @@ bool WorldFile::open() {
 bool WorldFile::create(){
     // First create blocks database
     int err;
-    err = sqlite3_exec(db, "CREATE TABLE blocks ("
+    err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
         "id INTEGER PRIMARY KEY ASC,"
         "type INTEGER,"
         "x INTEGER,"
@@ -71,7 +67,7 @@ bool WorldFile::create(){
         "z INTEGER"
     ");", 0, 0, 0);
 
-    err = sqlite3_exec(db, "CREATE INDEX blocks_full_coord ON blocks ("
+    err = sqlite3_exec(db->db, "CREATE INDEX blocks_full_coord ON blocks ("
         "x ASC, y ASC, z ASC"
     ");", 0, 0, 0);
 
@@ -88,10 +84,14 @@ bool WorldFile::close() {
     flock(fileno(fp), LOCK_UN);
     fclose(fp);
 
-    // Close the db
-    sqlite3_close(db);
+    delete(db);
 
     return true;
+}
+
+World::World(WorldFile *wf) {
+    this->wf = wf;
+    this->db = wf->db;
 }
 
 bool World::loadBlocks(PointV points) {
@@ -102,7 +102,7 @@ bool World::loadBlocks(PointV points) {
         sqlite3_stmt *res;
         char *query;
         sprintf(query, "SELECT * FROM blocks where x=%F AND y=%F AND z=%F", i->x, i->y, i->z);
-        err = sqlite3_prepare_v2(db, query, 100, &res, &ztail);
+        err = sqlite3_prepare_v2(db->db, query, 100, &res, &ztail);
 
         if (err != SQLITE_OK) {
             throw Exception("Failed to load block!");

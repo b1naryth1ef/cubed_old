@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global.h"
+#include "db.h"
 
 using namespace rapidjson;
 
@@ -20,7 +21,7 @@ class Block {
 
         Block(sqlite3_stmt *res);
 
-        bool save(sqlite3 *db);
+        bool save(DB *db);
 };
 
 typedef std::vector<Block*> BlockV;
@@ -29,7 +30,7 @@ class WorldFile {
     private:
         FILE *fp;
     public:
-        sqlite3 *db;
+        DB *db;
         std::string directory;
         std::string name;
         int version;
@@ -44,9 +45,14 @@ class WorldFile {
 };
 
 class World {
+    private:
+        WorldFile *wf;
+
     public:
         std::map<Point*, Block*> blocks;
-        sqlite3 *db;
+        DB *db;
+
+        World(WorldFile *wf);
 
         // Checks which blocks are loaded and optionally unloads some
         int tick();

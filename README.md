@@ -40,6 +40,13 @@ Structure:
 ```
 
 
+# Threads
+- Server Main Loop
+- Networking Thread
+- Tick Update Thread
+
+
 # Requirements
 - https://github.com/miloyip/rapidjson
+
 
