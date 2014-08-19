@@ -6,6 +6,7 @@ void catch_signal(int signum) {
     LOG.L("Recieved signal %d", signum);
     s->active = false;
     s->main_thread.join();
+    s->net_thread.join();
     delete(s);
     exit(signum);
 }

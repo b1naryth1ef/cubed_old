@@ -18,7 +18,6 @@
 #include <sys/file.h>
 #include <signal.h>
 
-
 // Json
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"

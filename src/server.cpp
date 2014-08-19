@@ -13,15 +13,20 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
     this->s_name = name;
     this->s_version = CUBED_VERSION;
     this->tickrate = tickrate;
+
+    this->udp_s = new UDPService();
+    this->udp_s->open("0.0.0.0", 6060);
 }
 
 Server::~Server() {
     this->world->close();
+    this->udp_s->close(-1);
 }
 
 void Server::serve_forever() {
     this->active = true;
     this->main_thread = std::thread(&Server::main_loop, this);
+    this->net_thread = std::thread(&Server::net_loop, this);
 }
 
 void Server::main_loop() {
@@ -43,7 +48,7 @@ void Server::main_loop() {
         tick_diff = ms.count();
 
         long int time_wait = (time_per_tick - tick_diff);
-        LOG.L("Tick took %ims to process fully, spare %ims.", tick_diff, time_wait);
+        // LOG.L("Tick took %ims to process fully, spare %ims.", tick_diff, time_wait);
 
         if (tick_diff > time_per_tick) {
             LOG.L("[WARN] RUNNING SLOW! Attempting to catch up by skipping sleep...");
@@ -55,4 +60,10 @@ void Server::main_loop() {
 
 void Server::tick() {
     // std::this_thread::sleep_for(std::chrono::milliseconds(7));
+}
+
+void Server::net_loop() {
+    while (this->active) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
 }

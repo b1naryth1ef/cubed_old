@@ -16,7 +16,7 @@ class Channel {
     public:
         bool connect(std::string addr, int port);
         bool disconnect(int reason);
-        int getDescriptor();
+        int getFD();
 };
 
 class UDPChannel: public Channel {
@@ -27,17 +27,42 @@ class TCPChannel: public Channel {
 
 };
 
-class Client {
+class Service {
+    public:
+        int fd;
+        bool open(std::string addr, int port);
+        bool close(int reason);
+        int getFD() { return fd; }
+};
+
+class UDPService: public Service {
+    public:
+        bool open(std::string addr, int port);
+        bool close(int reason);
+};
+
+class TCPService: public Service {
+    public:
+        bool open(std::string addr, int port);
+        bool close(int reason);
+
+};
+
+class NetClient {
     private:
         std::vector<Channel *> channels;
         int ep_fd;
     public:
-        Client();
+        NetClient();
+};
+
+class NetServer {
+
 };
 
 
 class Packet {
     public:
-        Client *cli;
+        NetClient *cli;
         Channel *chan;
 };

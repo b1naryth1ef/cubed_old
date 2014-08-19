@@ -8,8 +8,11 @@ class Server {
     public:
         // TODO: allow multiple worlds
         World *world;
-        std::thread main_thread;
+        std::thread main_thread, net_thread;
         bool active;
+
+        UDPService *udp_s;
+        TCPService *tcp_s;
 
         // Server info
         std::string s_name;
@@ -22,6 +25,7 @@ class Server {
 
         void serve_forever();
         void tick();
+
         void main_loop();
         void net_loop();
 };
