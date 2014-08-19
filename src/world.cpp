@@ -1,5 +1,37 @@
 #include "world.h"
 
+void load_default_block_types() {
+    LOG.L("Loading default block types...");
+
+    BlockType *null_bt = new BlockType("null");
+    BlockTypeIndex[null_bt->type] = null_bt;
+
+    BlockType *air_bt = new BlockType("air");
+    BlockTypeIndex[air_bt->type] = air_bt;
+}
+
+Point::Point(double x, double y, double z) {
+    this->x = x;
+    this->y = y;
+    this->z = z;
+}
+
+Point::Point(int x, int y, int z) {
+    this->x = x;
+    this->y = y;
+    this->z = z;
+}
+
+Point::Point(const Value &v) {
+    x = v[SizeType(0)].GetInt();
+    y = v[SizeType(1)].GetInt();
+    z = v[SizeType(2)].GetInt();
+}
+
+BlockType::BlockType(std::string type_name) {
+    this->type = type_name;
+}
+
 WorldFile::WorldFile(std::string dir) {
     directory = dir;
 }
@@ -9,6 +41,7 @@ WorldFile::~WorldFile() {
 }
 
 bool WorldFile::open() {
+    LOG.L("Attempting to open worldfile...");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
     if (!fp) {
@@ -37,9 +70,20 @@ bool WorldFile::open() {
     }
 
     // Parse the name and version
-    name = d["name"].GetString();
-    version = d["version"].GetInt();
+    this->name = d["name"].GetString();
+    this->version = d["version"].GetInt();
     LOG.L("Name and version: %s, %i", name.c_str(), version);
+
+    // Parse the origin point
+    const Value& org = d["origin"];
+
+    // Some minor validation of the array to avoid segfaults huehue
+    if (!org.IsArray() or org.Size() != 3) {
+        throw Exception("Invalid origin in world json...");
+    }
+
+    // Load the origin as a point
+    this->origin = new Point(org);
 
     // Check the version is valid
     if (version < SUPPORTED_WORLD_FILE_VERSION) {
@@ -66,7 +110,7 @@ bool WorldFile::create() {
     int err;
     err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
         "id INTEGER PRIMARY KEY ASC,"
-        "type INTEGER,"
+        "type TEXT,"
         "x INTEGER,"
         "y INTEGER,"
         "z INTEGER"
@@ -108,6 +152,10 @@ World::World(std::string path) {
     this->db = this->wf->db;
 }
 
+bool World::load() {
+
+}
+
 World::~World() {
     this->close();
 }
@@ -118,26 +166,39 @@ bool World::close() {
 }
 
 bool World::loadBlocks(PointV points) {
-    const char *ztail;
-    int err;
-
     for (auto i : points) {
-        sqlite3_stmt *stmt;
-        char *query;
-        sprintf(query, "SELECT * FROM blocks where x=%F AND y=%F AND z=%F", i->x, i->y, i->z);
-        err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
+        this->loadBlock(i);
+    }
 
-        if (err != SQLITE_OK) {
-            throw Exception("Failed to load block!");
-        }
+    return true;
+}
 
-        int s = sqlite3_step(stmt);
-        if (s == SQLITE_ROW) {
-            Block b = Block(stmt);
-            blocks[i] = &b;
-        } else {
-            throw Exception("Failed to load block!");
-        }
+bool World::loadBlock(Point *p) {
+
+    Block *b;
+    sqlite3_stmt *stmt;
+    char *query = (char *) malloc(2048);
+    const char *ztail;
+
+    sprintf(query, "SELECT * FROM blocks WHERE x=%F AND y=%F AND z=%F", p->x, p->y, p->z);
+    int err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
+
+    free(query);
+
+    if (err != SQLITE_OK) {
+        throw Exception("Failed to load block, sql!");
+    }
+
+    int s = sqlite3_step(stmt);
+    if (s == SQLITE_ROW) {
+        b = new Block(stmt);
+        blocks[p] = b;
+    } else if (s == SQLITE_DONE) {
+        LOG.L("No block exists for %F, %F, %F! Assuming air block.", p->x, p->y, p->z);
+        b = new Block(p->copy(), BlockTypeIndex["air"]);
+        blocks[p] = b;
+    } else {
+        throw Exception("Failed to load block, query!");
     }
 }
 
@@ -151,9 +212,19 @@ Block *World::getBlock(Point *p)  {
 
 Block::Block(sqlite3_stmt *res) {
     this->id = sqlite3_column_int(res, 0);
-    this->type = sqlite3_column_int(res, 1);
-    this->pos.x = sqlite3_column_int(res, 2);
-    this->pos.y = sqlite3_column_int(res, 3);
-    this->pos.z = sqlite3_column_int(res, 4);
-}
 
+    const unsigned char *type;
+    type = sqlite3_column_text(res, 1);
+
+    const char *type_c = reinterpret_cast<const char*>(type);
+    if (BlockTypeIndex.count(type_c) == 1) {
+        this->type = BlockTypeIndex[type_c];
+    } else {
+        LOG.L("Found unknown block type %s, using null", type);
+        this->type = BlockTypeIndex["null"];
+    }
+    
+    this->pos->x = sqlite3_column_int(res, 2);
+    this->pos->y = sqlite3_column_int(res, 3);
+    this->pos->z = sqlite3_column_int(res, 4);
+}

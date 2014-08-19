@@ -34,3 +34,10 @@ class Client {
     public:
         Client();
 };
+
+
+class Packet {
+    public:
+        Client *cli;
+        Channel *chan;
+};

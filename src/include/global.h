@@ -8,6 +8,8 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <queue>
+#include <functional>
 
 #include <string.h>
 #include <stdarg.h>
@@ -32,3 +34,7 @@
 
 static Log LOG("cubed.log", true);
 static int CUBED_VERSION = 1;
+
+static int CUBED_RELEASE_A = 0;
+static int CUBED_RELEASE_B = 0;
+static int CUBED_RELEASE_C = 1;

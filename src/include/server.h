@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "world.h"
+#include "net.h"
 
 class Server {
     public:
@@ -16,10 +17,11 @@ class Server {
 
         int tickrate;
 
-        Server(std::string world_name, std::string name);
+        Server(std::string world_name, std::string name, int tickrate);
         ~Server();
 
         void serve_forever();
         void tick();
-        void loop();
+        void main_loop();
+        void net_loop();
 };

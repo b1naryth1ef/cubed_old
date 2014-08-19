@@ -42,10 +42,10 @@ class Log {
             vsprintf(buffer, format, argptr);
 
             // Format a time string
-            char timestring[8];
+            char timestring[10];
             time_t now = time(NULL);
             struct tm *t = localtime(&now);
-            strftime(timestring, sizeof(timestring) - 1, "%H:%M", t);
+            strftime(timestring, sizeof(timestring) - 1, "%H:%M:%S", t);
 
             // Write it out to the optional files
             mw.write("[", 1);

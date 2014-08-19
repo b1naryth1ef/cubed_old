@@ -17,10 +17,7 @@ void bind_signals() {
 int main(int argc, const char* argv[]) {
     bind_signals();
 
-    // Load the SQLite3 Module stuff
-    init_db_module();
-
-    s = new Server("testworld", "Test Server");
+    s = new Server("testworld", "Test Server", 64);
     s->serve_forever();
 
     while (s->active) {

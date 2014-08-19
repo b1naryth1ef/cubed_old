@@ -10,16 +10,58 @@ static const int SUPPORTED_WORLD_FILE_VERSION = 1;
 class Point {
     public:
         double x, y, z;
+
+        Point(double x, double y, double z);
+        Point(int x, int y, int z);
+        Point(const Value &v);
+        Point() {};
+
+        Point *copy() {
+            return new Point(x, y, z);
+        }
+
+        std::string debug() {
+            char *x;
+            sprintf(x, "Point<%F, %F, %F>", x, y, z);
+            std::string result = std::string(x);
+            free(x);
+            return result;
+        }
 };
 
 typedef std::vector<Point*> PointV;
 
+class BlockType {
+    public:
+        std::string type;
+
+        BlockType(std::string);
+};
+
+static std::map<std::string, BlockType*> BlockTypeIndex;
+
+void load_default_block_types();
+
+static void init_world_module() {
+    load_default_block_types();
+}
+
 class Block {
     public:
-        int id, type;
-        Point pos;
+        int id;
+        BlockType *type;
+        Point *pos;
 
         Block(sqlite3_stmt *res);
+
+        Block(Point *pos) {
+            pos = pos;
+        };
+
+        Block(Point *pos, BlockType *type) {
+            pos = pos;
+            type = type;
+        }
 
         bool save(DB *db);
 };
@@ -33,6 +75,7 @@ class WorldFile {
         DB *db;
         std::string directory;
         std::string name;
+        Point *origin;
         int version;
 
         WorldFile(std::string dir);
@@ -56,6 +99,7 @@ class World {
         World(std::string path);
         ~World();
 
+        bool load();
         bool close();
 
         // Checks which blocks are loaded and optionally unloads some
@@ -65,8 +109,10 @@ class World {
         void recache();
 
         // Attempts to load a set of blocks
-        bool loadBlocks(PointV points);
+        bool loadBlocks(PointV);
+        bool loadBlock(Point *);
+        bool loadBlockForce(Point *);
 
         // Gets a block at point P or returns null
-        Block *getBlock(Point *p);
+        Block *getBlock(Point *);
 };
