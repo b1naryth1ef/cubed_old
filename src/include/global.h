@@ -31,9 +31,13 @@
 
 #define MULTI_LINE_STRING(a) #a
 
-static Log LOG("cubed.log", true);
+static Log LOG("debug.log", true);
 static int CUBED_VERSION = 1;
 
 static int CUBED_RELEASE_A = 0;
 static int CUBED_RELEASE_B = 0;
 static int CUBED_RELEASE_C = 1;
+
+#define DEBUG(x, ...)  LOG.L("DEBUG", x, ## __VA_ARGS__)
+#define WARN(x, ...)   LOG.L("WARN ", x, ## __VA_ARGS__)
+#define ERROR(x, ...)  LOG.L("ERROR", x, ## __VA_ARGS__)

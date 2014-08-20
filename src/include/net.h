@@ -2,6 +2,7 @@
 
 #include "global.h"
 
+#include "flatbuffers/flatbuffers.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
+
+// generated Files
+#include "gen/packet_generated.h"
+#include "gen/handshake_generated.h"
 
 class Channel {
     public:
@@ -30,6 +35,7 @@ class TCPChannel: public Channel {
 class Service {
     public:
         int fd;
+        bool active;
         bool open(std::string addr, int port);
         bool close(int reason);
         int getFD() { return fd; }
@@ -37,8 +43,11 @@ class Service {
 
 class UDPService: public Service {
     public:
+        std::thread read_loop_thread;
+
         bool open(std::string addr, int port);
         bool close(int reason);
+        void read_loop();
 };
 
 class TCPService: public Service {
@@ -55,6 +64,15 @@ class NetClient {
     public:
         NetClient();
 };
+
+// ServiceClient represent remote clients on a local service
+class ServiceClient {
+    private:
+        char buffer[4096];
+};
+
+class UDPServiceClient {};
+class TCPServiceClient {};
 
 class NetServer {
 

@@ -1,7 +1,7 @@
 #include "world.h"
 
 void load_default_block_types() {
-    LOG.L("Loading default block types...");
+    DEBUG("Loading default block types...");
 
     BlockType *null_bt = new BlockType("null");
     BlockTypeIndex[null_bt->type] = null_bt;
@@ -41,11 +41,11 @@ WorldFile::~WorldFile() {
 }
 
 bool WorldFile::open() {
-    LOG.L("Attempting to open worldfile...");
+    DEBUG("Attempting to open worldfile...");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
     if (!fp) {
-        LOG.L("Failed to open world file!");
+        ERROR("Failed to open world file!");
         throw Exception("Failed to open world file!");
     }
 
@@ -53,7 +53,7 @@ bool WorldFile::open() {
     //  this world file.
     int lock_result = flock(fileno(fp), LOCK_EX | LOCK_NB);
     if (lock_result != 0) {
-        LOG.L("Error getting lock: %i", lock_result);
+        ERROR("Error getting lock: %i", lock_result);
 
         throw Exception("Error occured getting lock for world file!");
     }
@@ -66,13 +66,14 @@ bool WorldFile::open() {
     try {
         d.ParseStream(is);
     } catch (std::string e) {
+        ERROR("Error occured parsing json world file: %s", e.c_str());
         throw Exception("Error occured parsing json world file!");
     }
 
     // Parse the name and version
     this->name = d["name"].GetString();
     this->version = d["version"].GetInt();
-    LOG.L("Name and version: %s, %i", name.c_str(), version);
+    DEBUG("Name and version: %s, %i", name.c_str(), version);
 
     // Parse the origin point
     const Value& org = d["origin"];
@@ -100,7 +101,7 @@ bool WorldFile::open() {
     this->db = new DB(dbpath);
 
     if (createdb) {
-        LOG.L("Creating database for first time...");
+        DEBUG("Creating database for first time...");
         create();
     }
 }
@@ -129,14 +130,14 @@ bool WorldFile::close() {
     if (!fp) { return false; }
 
     // Unlock the file and close it
-    LOG.L("Closing world file %s", name.c_str());
+    DEBUG("Closing world file %s", name.c_str());
     flock(fileno(fp), LOCK_UN);
     fclose(fp);
 
-    LOG.L("Closing db...");
+    DEBUG("Closing db...");
     delete(db);
 
-    LOG.L("Done closing worldfile!");
+    DEBUG("Done closing worldfile!");
 
     return true;
 }
@@ -194,7 +195,7 @@ bool World::loadBlock(Point *p) {
         b = new Block(stmt);
         blocks[p] = b;
     } else if (s == SQLITE_DONE) {
-        LOG.L("No block exists for %F, %F, %F! Assuming air block.", p->x, p->y, p->z);
+        DEBUG("No block exists for %F, %F, %F! Assuming air block.", p->x, p->y, p->z);
         b = new Block(p->copy(), BlockTypeIndex["air"]);
         blocks[p] = b;
     } else {
@@ -220,7 +221,7 @@ Block::Block(sqlite3_stmt *res) {
     if (BlockTypeIndex.count(type_c) == 1) {
         this->type = BlockTypeIndex[type_c];
     } else {
-        LOG.L("Found unknown block type %s, using null", type);
+        DEBUG("Found unknown block type %s, using null", type);
         this->type = BlockTypeIndex["null"];
     }
     

@@ -19,6 +19,7 @@ class Log {
     public:
         std::ofstream *file;
         ioutil::MultiWriter mw;
+        std::mutex mutex;
 
         Log() {
             mw.add(&std::cout);
@@ -34,7 +35,7 @@ class Log {
             }
         }
 
-        void L(const char* format, ...) {
+        void L(std::string tag, const char* format, ...) {
             va_list argptr;
             char buffer[2048];
 
@@ -48,11 +49,15 @@ class Log {
             strftime(timestring, sizeof(timestring) - 1, "%H:%M:%S", t);
 
             // Write it out to the optional files
+            mutex.lock();
             mw.write("[", 1);
-            mw.write(timestring, strlen(timestring));
+            mw.write(tag.c_str(), strlen(tag.c_str()));
             mw.write("] ", 2);
+            mw.write(timestring, strlen(timestring));
+            mw.write(" - ", 3);
             mw.write(buffer, strlen(buffer));
             mw.write("\n", 1);
+            mutex.unlock();
 
             va_end(argptr);
         }

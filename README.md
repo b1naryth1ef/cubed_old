@@ -39,6 +39,11 @@ Structure:
 }
 ```
 
+# Networking Loop
+- Accept clients
+- Dump clients (ServiceClient) into a vector inside Service
+- epoll on all the ServiceClient fd's, read data as Packet into a queue
+- Server iterates over the queue and parses messages one by one, special code to transalate to JSON if needed?
 
 # Threads
 - Server Main Loop

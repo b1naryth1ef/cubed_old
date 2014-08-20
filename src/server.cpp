@@ -1,7 +1,7 @@
 #include "server.h"
 
 Server::Server(std::string world_name, std::string name, int tickrate) {
-    LOG.L("Cubed v%i.%i.%i", CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C);
+    DEBUG("Cubed v%i.%i.%i", CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C);
 
     // Load the SQLite3 Module stuff
     init_db_module();
@@ -53,10 +53,10 @@ void Server::main_loop() {
         tick_diff = ms.count();
 
         long int time_wait = (time_per_tick - tick_diff);
-        // LOG.L("Tick took %ims to process fully, spare %ims.", tick_diff, time_wait);
+        // DEBUG("Tick took %ims to process fully, spare %ims.", tick_diff, time_wait);
 
         if (tick_diff > time_per_tick) {
-            LOG.L("[WARN] RUNNING SLOW! Attempting to catch up by skipping sleep...");
+            WARN("RUNNING SLOW! Attempting to catch up by skipping sleep...");
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(time_wait));
         }

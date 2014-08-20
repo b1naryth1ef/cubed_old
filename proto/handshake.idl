@@ -1,0 +1,21 @@
+namespace cubed;
+
+table ClientHandshake {
+    uuid: string;
+    nick: string;
+    key: string;
+}
+
+table ServerHandshake {
+    id: ushort;
+    channel: int;
+}
+
+table Disconnect {
+    tag: short;
+    reason: string;
+}
+
+root_type ClientHandshake;
+root_type ServerHandshake;
+root_type Disconnect;
