@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "db.h"
+#include "util.h"
 
 using namespace rapidjson;
 
@@ -55,6 +56,7 @@ typedef std::vector<Point*> PointV;
 
 class BlockType {
     public:
+        int id;
         std::string type;
         bool is_custom;
 
@@ -77,13 +79,15 @@ class Block {
         Point *pos;
 
 
-        Block(sqlite3_stmt *res);
+        Block(World *w, sqlite3_stmt *res);
 
-        Block(Point *pos) {
+        Block(World *w, Point *pos) {
+            this->world = w;
             this->pos = pos;
         };
 
-        Block(Point *pos, BlockType *type) {
+        Block(World *w, Point *pos, BlockType *type) {
+            this->world = w;
             this->pos = pos;
             this->type = type;
         }
@@ -141,6 +145,13 @@ class World {
         // Attempts to load a single block
         bool loadBlock(Point);
 
-        // Gets a block at point P or returns null
+        // Gets a block at point P from cache or returns null
         Block *getBlock(Point);
+
+        // Gets a block at point P from cache or loads it and returns
+        Block *getBlockForced(Point);
+
+        // Commits the blocktypeindex to the db
+        bool addBlockType(BlockType *bt);
+        bool loadBlockTypeIndex();
 };

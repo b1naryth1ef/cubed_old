@@ -7,8 +7,6 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
     init_db_module();
 
     this->world = new World(world_name);
-    this->world->type_index = new BlockTypeIndexT();
-    load_default_block_types(this->world->type_index);
     this->world->load();
 
     this->s_name = name;

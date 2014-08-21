@@ -18,6 +18,22 @@ static std::vector<std::string> splitString(const std::string &s, char delim) {
     return elems;
 }
 
+class Timer {
+    public:
+        std::chrono::high_resolution_clock::time_point t0, t1;
+
+        void start() {
+            this->t0 = std::chrono::high_resolution_clock::now();
+        }
+
+        long int end() {
+            this->t1 = std::chrono::high_resolution_clock::now();
+            std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds>
+                (this->t1 - this->t0);
+            return ms.count();
+        }
+};
+
 class Ticker {
     private:
         int diff, per;

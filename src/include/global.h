@@ -31,6 +31,8 @@
 
 #include "log.h"
 
+class Server;
+
 #define MULTI_LINE_STRING(a) #a
 
 static Log LOG("debug.log", true);
