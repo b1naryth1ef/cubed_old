@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys, time, fnmatch
+import os, sys, time, fnmatch, shutil
 
 # Linked libraries
 LIBRARIES = [
@@ -50,10 +50,36 @@ def build():
 
     return not bool(i), (time.time() - start)
 
+def setup_rapidjson():
+    if os.path.exists("/usr/include/rapidjson"):
+        os.system("sudo rm -rf /usr/include/rapidjson")
+
+    os.system("git clone https://github.com/miloyip/rapidjson.git")
+    os.system("sudo cp -rf rapidjson/include/rapidjson /usr/include/rapidjson")
+    os.system("rm -rf rapidjson")
+
+def setup_flatbuffers():
+    start = os.getcwd()
+    os.system("git clone https://github.com/google/flatbuffers.git")
+    os.chdir("flatbuffers/build/")
+    os.system("cmake ..")
+    os.system("make -j8")
+    os.system("sudo make install")
+    os.chdir(start)
+    os.system("rm -rf flatbuffers")
+
+def setup():
+    setup_rapidjson()
+    setup_flatbuffers()
+
 if __name__ == "__main__":
     if len(sys.argv) <= 1:
-        print "Usage: ./build.py <build|run>"
+        print "Usage: ./build.py <build|run|setup>"
         sys.exit(1)
+
+    if sys.argv[1] == "setup":
+        print "Setting up enviroment..."
+        setup()
 
     if sys.argv[1] == "build":
         print "Building..."
