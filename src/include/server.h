@@ -3,6 +3,7 @@
 #include "global.h"
 #include "world.h"
 #include "net.h"
+#include "util.h"
 
 class Server {
     public:

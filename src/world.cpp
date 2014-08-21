@@ -3,10 +3,10 @@
 void load_default_block_types() {
     DEBUG("Loading default block types...");
 
-    BlockType *null_bt = new BlockType("null");
+    BlockType *null_bt = new BlockType("null", false);
     BlockTypeIndex[null_bt->type] = null_bt;
 
-    BlockType *air_bt = new BlockType("air");
+    BlockType *air_bt = new BlockType("air", false);
     BlockTypeIndex[air_bt->type] = air_bt;
 }
 
@@ -26,10 +26,6 @@ Point::Point(const Value &v) {
     x = v[SizeType(0)].GetInt();
     y = v[SizeType(1)].GetInt();
     z = v[SizeType(2)].GetInt();
-}
-
-BlockType::BlockType(std::string type_name) {
-    this->type = type_name;
 }
 
 WorldFile::WorldFile(std::string dir) {
@@ -145,16 +141,18 @@ bool WorldFile::close() {
 World::World(WorldFile *wf) {
     this->wf = wf;
     this->db = wf->db;
+    this->load();
 }
 
 World::World(std::string path) {
     this->wf = new WorldFile(path);
     this->wf->open();
     this->db = this->wf->db;
+    this->load();
 }
 
 bool World::load() {
-
+    DEBUG("Loading world...");
 }
 
 World::~World() {
@@ -168,20 +166,19 @@ bool World::close() {
 
 bool World::loadBlocks(PointV points) {
     for (auto i : points) {
-        this->loadBlock(i);
+        this->loadBlock(*i);
     }
 
     return true;
 }
 
-bool World::loadBlock(Point *p) {
-
+bool World::loadBlock(Point p) {
     Block *b;
     sqlite3_stmt *stmt;
     char *query = (char *) malloc(2048);
     const char *ztail;
 
-    sprintf(query, "SELECT * FROM blocks WHERE x=%F AND y=%F AND z=%F", p->x, p->y, p->z);
+    sprintf(query, "SELECT * FROM blocks WHERE x=%F AND y=%F AND z=%F", p.x, p.y, p.z);
     int err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
 
     free(query);
@@ -195,15 +192,15 @@ bool World::loadBlock(Point *p) {
         b = new Block(stmt);
         blocks[p] = b;
     } else if (s == SQLITE_DONE) {
-        DEBUG("No block exists for %F, %F, %F! Assuming air block.", p->x, p->y, p->z);
-        b = new Block(p->copy(), BlockTypeIndex["air"]);
+        DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
+        b = new Block(p.copy(), BlockTypeIndex["air"]);
         blocks[p] = b;
     } else {
         throw Exception("Failed to load block, query!");
     }
 }
 
-Block *World::getBlock(Point *p)  {
+Block *World::getBlock(Point p)  {
     if (blocks.count(p) != 1) {
         return NULL;
     }

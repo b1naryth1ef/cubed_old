@@ -10,6 +10,8 @@
 #include <chrono>
 #include <queue>
 #include <functional>
+#include <unordered_map>
+#include <sstream>
 
 #include <string.h>
 #include <stdarg.h>

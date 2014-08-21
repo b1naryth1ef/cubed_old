@@ -1,6 +1,7 @@
 #include "main.h"
 
 Server *s;
+Client *c;
 
 void catch_signal(int signum) {
     DEBUG("Recieved signal %d, attempting exit", signum);
@@ -21,7 +22,7 @@ int main(int argc, const char* argv[]) {
     s = new Server("testworld", "Test Server", 64);
     s->serve_forever();
 
-    while (s->active) {
+    while (s->active || c->active) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }

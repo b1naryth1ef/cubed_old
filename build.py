@@ -29,8 +29,10 @@ def find_source_files(start_dir, ext=[".cpp", ".c"]):
     return result
 
 def gen_flatc_command():
-    return "flatc -o src/include/gen/ -c %s" % ' '.join(find_source_files("proto", ext=[".idl"]))
+    if not os.path.exists("src/include/gen"):
+        os.mkdir("src/include/gen")
 
+    return "flatc -o src/include/gen/ -c %s" % ' '.join(find_source_files("proto", ext=[".idl"]))
 
 def gen_build_command():
     base = ["g++ -w -std=c++11 -o cubed.o"]

@@ -35,36 +35,19 @@ void Server::serve_forever() {
     access things, or queue things to this thread.
 */
 void Server::main_loop() {
-    int tick_diff, time_per_tick = (1.0 / this->tickrate) * 1000;
+    Ticker t = Ticker(this->tickrate);
 
-    /*
-        This is the main loop which processes ticks. The logic for this is
-        fairly simple, namely we try and keep up with num(tickrate) per second,
-        if we have spare time we just spend it sleeping. Generally this should
-        allow us to never skip ticks and remain efficient. Ticks that take longer
-        will immediatly fire the next tick allowing for calculations to even
-        out over time.
-    */
     while (this->active) {
-        std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
-        this->tick();
-        std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-        std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds>(t1 - t0);
-        tick_diff = ms.count();
-
-        long int time_wait = (time_per_tick - tick_diff);
-        // DEBUG("Tick took %ims to process fully, spare %ims.", tick_diff, time_wait);
-
-        if (tick_diff > time_per_tick) {
-            WARN("RUNNING SLOW! Attempting to catch up by skipping sleep...");
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(time_wait));
+        if (!t.next()) {
+            WARN("RUNNING SLOW!");
         }
+
+        this->tick();
     }
 }
 
 void Server::tick() {
-    // std::this_thread::sleep_for(std::chrono::milliseconds(7));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void Server::net_loop() {

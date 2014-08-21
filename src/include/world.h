@@ -29,13 +29,32 @@ class Point {
         }
 };
 
+struct pointHashFunc {
+    size_t operator()(const Point &k) const{
+        size_t h1 = std::hash<double>()(k.x);
+        size_t h2 = std::hash<double>()(k.y);
+        size_t h3 = std::hash<double>()(k.z);
+        return (h1 ^ (h2 << 1)) ^ h3;
+    }
+};
+
+struct pointEqualsFunc {
+  bool operator()( const Point& lhs, const Point& rhs ) const {
+    return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.z == rhs.z);
+  }
+};
+
 typedef std::vector<Point*> PointV;
 
 class BlockType {
     public:
         std::string type;
+        bool is_custom;
 
-        BlockType(std::string);
+        BlockType(std::string type_name, bool is_custom) {
+            this->type = type_name;
+            this->is_custom = is_custom;
+        };
 };
 
 static std::map<std::string, BlockType*> BlockTypeIndex;
@@ -87,12 +106,14 @@ class WorldFile {
         ~WorldFile();
 };
 
+typedef std::unordered_map<Point, Block*, pointHashFunc, pointEqualsFunc> BlockCacheT;
+
 class World {
     private:
         WorldFile *wf;
 
     public:
-        std::map<Point*, Block*> blocks;
+        BlockCacheT blocks;
         DB *db;
 
         World(WorldFile *wf);
@@ -110,9 +131,9 @@ class World {
 
         // Attempts to load a set of blocks
         bool loadBlocks(PointV);
-        bool loadBlock(Point *);
-        bool loadBlockForce(Point *);
+        // Attempts to load a single block
+        bool loadBlock(Point);
 
         // Gets a block at point P or returns null
-        Block *getBlock(Point *);
+        Block *getBlock(Point);
 };
