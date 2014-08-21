@@ -1,13 +1,13 @@
 #include "world.h"
 
-void load_default_block_types() {
+void load_default_block_types(BlockTypeIndexT *bti) {
     DEBUG("Loading default block types...");
 
     BlockType *null_bt = new BlockType("null", false);
-    BlockTypeIndex[null_bt->type] = null_bt;
+    (*bti)[null_bt->type] = null_bt;
 
     BlockType *air_bt = new BlockType("air", false);
-    BlockTypeIndex[air_bt->type] = air_bt;
+    (*bti)[air_bt->type] = air_bt;
 }
 
 Point::Point(double x, double y, double z) {
@@ -141,18 +141,21 @@ bool WorldFile::close() {
 World::World(WorldFile *wf) {
     this->wf = wf;
     this->db = wf->db;
-    this->load();
 }
 
 World::World(std::string path) {
     this->wf = new WorldFile(path);
     this->wf->open();
     this->db = this->wf->db;
-    this->load();
 }
 
 bool World::load() {
     DEBUG("Loading world...");
+
+    this->loadBlock(Point(0, 0, 0));
+    Block *b = this->getBlock(Point(0, 0, 0));
+    b->save();
+
 }
 
 World::~World() {
@@ -172,7 +175,18 @@ bool World::loadBlocks(PointV points) {
     return true;
 }
 
+/*
+    Attempts to load a block at Point p. If the block exists in the cache,
+    it will NOT be loaded and this will return false. If the block does not
+    exist at all, a new air block will be created and added to BOTH the
+    database and block cache.
+*/
 bool World::loadBlock(Point p) {
+    // If the block already exists, skip this
+    if (blocks.count(p)) {
+        return false;
+    }
+
     Block *b;
     sqlite3_stmt *stmt;
     char *query = (char *) malloc(2048);
@@ -193,16 +207,36 @@ bool World::loadBlock(Point p) {
         blocks[p] = b;
     } else if (s == SQLITE_DONE) {
         DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
-        b = new Block(p.copy(), BlockTypeIndex["air"]);
+        b = new Block(p.copy(), (*this->type_index)["air"]);
+        b->world = this;
         blocks[p] = b;
+        b->save();
     } else {
         throw Exception("Failed to load block, query!");
     }
+
+    return true;
 }
 
+/*
+    Returns a block at Point p from the loaded block cache, if the block
+    is not loaded or not in the cache, it will return NULL instead.
+*/
 Block *World::getBlock(Point p)  {
     if (blocks.count(p) != 1) {
         return NULL;
+    }
+
+    return blocks.find(p)->second;
+}
+
+/*
+    Same as `World::getBlock` except it will attempt to load the block
+    from the db/create an empty air block if the block is not in the cache.
+*/
+Block *World::getBlockForced(Point p) {
+    if (block.count(p) != 1) {
+        this->loadBlock(p);
     }
 
     return blocks.find(p)->second;
@@ -215,14 +249,35 @@ Block::Block(sqlite3_stmt *res) {
     type = sqlite3_column_text(res, 1);
 
     const char *type_c = reinterpret_cast<const char*>(type);
-    if (BlockTypeIndex.count(type_c) == 1) {
-        this->type = BlockTypeIndex[type_c];
+    if (this->world->type_index->count(type_c) == 1) {
+        this->type = (*this->world->type_index)[type_c];
     } else {
         DEBUG("Found unknown block type %s, using null", type);
-        this->type = BlockTypeIndex["null"];
+        this->type = (*this->world->type_index)["null"];
     }
     
     this->pos->x = sqlite3_column_int(res, 2);
     this->pos->y = sqlite3_column_int(res, 3);
     this->pos->z = sqlite3_column_int(res, 4);
+}
+
+bool Block::save() {
+    DEBUG("Saving block...");
+
+    char *query = (char *) malloc(2048);
+
+    sprintf(query,
+        "INSERT INTO blocks (type, x, y, z)"
+        "VALUES ('%s', %F, %F, %F);",
+        this->type->type.c_str(),
+        this->pos->x, this->pos->y, this->pos->z
+    );
+
+    int s = sqlite3_exec(this->world->db->db, query, 0, 0, 0);
+    if (s != SQLITE_OK) {
+        ERROR("Failed to save block!");
+        throw Exception("Error occured while saving block to db!");
+    }
+
+    free(query);
 }

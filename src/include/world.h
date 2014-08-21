@@ -7,6 +7,13 @@ using namespace rapidjson;
 
 static const int SUPPORTED_WORLD_FILE_VERSION = 1;
 
+// Forward declare everything
+class Point;
+class BlockType;
+class Block;
+class WorldFile;
+class World;
+
 class Point {
     public:
         double x, y, z;
@@ -57,32 +64,31 @@ class BlockType {
         };
 };
 
-static std::map<std::string, BlockType*> BlockTypeIndex;
 
-void load_default_block_types();
+typedef std::map<std::string, BlockType*> BlockTypeIndexT;
 
-static void init_world_module() {
-    load_default_block_types();
-}
+void load_default_block_types(BlockTypeIndexT *);
 
 class Block {
     public:
         int id;
+        World *world;
         BlockType *type;
         Point *pos;
+
 
         Block(sqlite3_stmt *res);
 
         Block(Point *pos) {
-            pos = pos;
+            this->pos = pos;
         };
 
         Block(Point *pos, BlockType *type) {
-            pos = pos;
-            type = type;
+            this->pos = pos;
+            this->type = type;
         }
 
-        bool save(DB *db);
+        bool save();
 };
 
 typedef std::vector<Block*> BlockV;
@@ -113,6 +119,7 @@ class World {
         WorldFile *wf;
 
     public:
+        BlockTypeIndexT *type_index;
         BlockCacheT blocks;
         DB *db;
 

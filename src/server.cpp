@@ -6,10 +6,11 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
     // Load the SQLite3 Module stuff
     init_db_module();
 
-    // Load the world stuff
-    init_world_module();
-
     this->world = new World(world_name);
+    this->world->type_index = new BlockTypeIndexT();
+    load_default_block_types(this->world->type_index);
+    this->world->load();
+
     this->s_name = name;
     this->s_version = CUBED_VERSION;
     this->tickrate = tickrate;
