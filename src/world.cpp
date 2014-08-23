@@ -369,16 +369,15 @@ Block::Block(World *w, sqlite3_stmt *res) {
     this->world = w;
     this->id = sqlite3_column_int(res, 0);
 
+    // Load block type, if it doesnt exist in index assign it to null
     int type = sqlite3_column_int(res, 1);
+    if (this->world->type_index->count(type) == 1) {
+        this->type = (*this->world->type_index)[type];
+    } else {
+        DEBUG("Found unknown block type %i, using null", type);
+        this->type = this->world->findBlockType("null");
+    }
 
-    // const char *type_c = reinterpret_cast<const char*>(type);
-    // if (this->world->type_index->count(type_c) == 1) {
-    //     this->type = (*this->world->type_index)[type_c];
-    // } else {
-    //     DEBUG("Found unknown block type %s, using null", type);
-    //     this->type = (*this->world->type_index)["null"];
-    // }
-    
     this->pos = new Point();
     this->pos->x = sqlite3_column_int(res, 2);
     this->pos->y = sqlite3_column_int(res, 3);

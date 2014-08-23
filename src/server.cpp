@@ -11,7 +11,7 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
 
     this->vars = new Dict();
     this->vars->setString("sv_name", name);
-    this->vars->setInt("sv_version", CUBED_VERSION)->rmvFlag(FLAG_WRITE);
+    this->vars->setInt("sv_version", CUBED_VERSION);
 
     //this->s_name = name;
 //    this->s_version = CUBED_VERSION;

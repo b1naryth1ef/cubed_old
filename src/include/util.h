@@ -2,6 +2,8 @@
 
 #include "global.h"
 
+using namespace rapidjson;
+
 static std::vector<std::string> &splitString(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
     std::string item;
@@ -93,14 +95,26 @@ enum CStorageType {
     STORAGE_STRING
 };
 
-enum VarType {
-    FLAG_EMPTY = 1 << 0,
-    FLAG_READ = 1 << 1,
-    FLAG_WRITE = 1 << 2,
-    FLAG_MEM = 1 << 3,
-};
+// enum VarType {
+//     FLAG_EMPTY = 1 << 0,
+//     FLAG_READ = 1 << 1,
+//     FLAG_WRITE = 1 << 2,
+//     FLAG_MEM = 1 << 3,
+// };
 
-static const int FLAG_INIT = FLAG_READ | FLAG_WRITE;
+// static const int FLAG_INIT = FLAG_READ | FLAG_WRITE;
+
+// void addFlag(int f) {
+//     this->flags |= f;
+// };
+
+// void rmvFlag(int f) {
+//     this->flags &= ~f;
+// };
+
+// bool hasFlag(int f) {
+//     return (this->flags & f);
+// };
 
 class Container {
     private:
@@ -116,26 +130,9 @@ class Container {
         } value;
 
         std::string s;
-        int flags;
 
     public:
         CStorageType type;
-
-        Container() {
-            this->flags = FLAG_INIT;
-        }
-
-        void addFlag(int f) {
-            this->flags |= f;
-        };
-
-        void rmvFlag(int f) {
-            this->flags &= ~f;
-        };
-
-        bool hasFlag(int f) {
-            return (this->flags & f);
-        };
 
         void setInt(int i) {
             this->type = STORAGE_INT;
@@ -166,6 +163,7 @@ class Container {
             this->ensureType(STORAGE_STRING);
             return this->s;
         }
+
 };
 
 class Dict {
@@ -214,4 +212,26 @@ class Dict {
             data[k] = c;
             return c;
         }
+
+        // Document *toJSON() {
+        //     Document result;
+
+        //     for (auto &kv : this->data) {
+        //         Value v;
+
+        //         if (kv.second->type == STORAGE_INT) {
+        //             v.SetInt(kv.second->getInt());
+        //         } else if (kv.second->type == STORAGE_STRING) {
+        //             v.setString(kv.second->getString());
+        //         } else if (kv.second->type == STORAGE_DOUBLE) {
+        //             v.setDouble(kv.second->getDouble());
+        //         }
+
+        //         result.addMember(kv.first, v);
+        //     }
+            
+        //     return result;
+        // }
+
+        bool fromJSON(Document *d){}
 };
