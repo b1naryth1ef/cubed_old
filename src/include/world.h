@@ -8,6 +8,11 @@ using namespace rapidjson;
 
 static const int SUPPORTED_WORLD_FILE_VERSION = 1;
 
+// These should always match those in the DB, otherwise something's fucky
+static const int BLOCK_TYPE_NULL = 1;
+static const int BLOCK_TYPE_AIR = 2;
+
+
 // Forward declare everything
 class Point;
 class BlockType;
@@ -57,17 +62,23 @@ typedef std::vector<Point*> PointV;
 class BlockType {
     public:
         int id;
+
         std::string type;
+        std::string owner;
+
+        bool active;
         bool is_custom;
 
         BlockType(std::string type_name, bool is_custom) {
             this->type = type_name;
             this->is_custom = is_custom;
         };
+
+        BlockType(sqlite3_stmt *res);
 };
 
 
-typedef std::map<std::string, BlockType*> BlockTypeIndexT;
+typedef std::map<int, BlockType*> BlockTypeIndexT;
 
 void load_default_block_types(BlockTypeIndexT *);
 
@@ -153,5 +164,9 @@ class World {
 
         // Commits the blocktypeindex to the db
         bool addBlockType(BlockType *bt);
+
+        // Finds a block type by string, returns nullptr on no match or more than one match
+        BlockType *findBlockType(std::string s);
+
         bool loadBlockTypeIndex();
 };

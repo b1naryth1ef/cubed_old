@@ -63,6 +63,14 @@ bool DB::drop_all() {
     }
 }
 
+void DB::begin() {
+    assert(sqlite3_exec(this->db, "BEGIN TRANSACTION;", 0, 0, 0) == SQLITE_OK);
+}
+
+void DB::end() {
+    assert(sqlite3_exec(this->db, "END TRANSACTION;", 0, 0, 0) == SQLITE_OK);
+}
+
 // Should be called on startup, makes sure SQLite is configured correctly
 void init_db_module() {
     sqlite3_config(SQLITE_CONFIG_SERIALIZED);

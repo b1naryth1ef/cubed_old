@@ -93,6 +93,15 @@ enum CStorageType {
     STORAGE_STRING
 };
 
+enum VarType {
+    FLAG_EMPTY = 1 << 0,
+    FLAG_READ = 1 << 1,
+    FLAG_WRITE = 1 << 2,
+    FLAG_MEM = 1 << 3,
+};
+
+static const int FLAG_INIT = FLAG_READ | FLAG_WRITE;
+
 class Container {
     private:
         void ensureType(CStorageType t) {
@@ -107,9 +116,26 @@ class Container {
         } value;
 
         std::string s;
+        int flags;
 
     public:
         CStorageType type;
+
+        Container() {
+            this->flags = FLAG_INIT;
+        }
+
+        void addFlag(int f) {
+            this->flags |= f;
+        };
+
+        void rmvFlag(int f) {
+            this->flags &= ~f;
+        };
+
+        bool hasFlag(int f) {
+            return (this->flags & f);
+        };
 
         void setInt(int i) {
             this->type = STORAGE_INT;
@@ -142,13 +168,17 @@ class Container {
         }
 };
 
-
 class Dict {
     private:
         std::map<std::string, Container*> data;
 
     public:
         Container *get(std::string k) {
+            if (data.count(k)) {
+                return data[k];
+            }
+
+            data[k] = new Container();
             return data[k];
         }
 
@@ -156,29 +186,32 @@ class Dict {
             return get(k)->getInt();
         }
 
-        void setInt(std::string k, int v) {
+        Container *setInt(std::string k, int v) {
             Container *c = new Container();
             c->setInt(v);
             data[k] = c;
+            return c;
         };
 
         double getDouble(std::string k) {
             return get(k)->getDouble();
         }
 
-        void setDouble(std::string k, double v) {
+        Container *setDouble(std::string k, double v) {
             Container *c = new Container();
             c->setDouble(v);
             data[k] = c;
+            return c;
         }
 
         std::string getString(std::string k) {
             return get(k)->getString();
         }
 
-        void setString(std::string k, std::string v) {
+        Container *setString(std::string k, std::string v) {
             Container *c = new Container();
             c->setString(v);
             data[k] = c;
+            return c;
         }
 };

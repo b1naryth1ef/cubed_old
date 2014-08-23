@@ -9,8 +9,12 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
     this->world = new World(world_name);
     this->world->load();
 
-    this->s_name = name;
-    this->s_version = CUBED_VERSION;
+    this->vars = new Dict();
+    this->vars->setString("sv_name", name);
+    this->vars->setInt("sv_version", CUBED_VERSION)->rmvFlag(FLAG_WRITE);
+
+    //this->s_name = name;
+//    this->s_version = CUBED_VERSION;
     this->tickrate = tickrate;
 
     this->udp_s = new UDPService();

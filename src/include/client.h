@@ -8,7 +8,8 @@
 class Client {
     public:
         bool active;
-        int tick_rate, fps_rate;
+        int tick_rate;
+        int fps_rate;
 
         // Networking
         std::string remote_host;

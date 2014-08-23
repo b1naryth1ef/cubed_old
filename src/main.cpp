@@ -17,6 +17,8 @@ void bind_signals() {
 }
 
 int main(int argc, const char* argv[]) {
+    DEBUG("Arg Count: %i", argc);
+
     bind_signals();
 
     s = new Server("testworld", "Test Server", 64);

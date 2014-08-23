@@ -16,10 +16,12 @@ class Server {
         TCPService *tcp_s;
 
         // Server info
-        std::string s_name;
-        int s_version;
-
+        // std::string s_name;
+        // int s_version;
         int tickrate;
+
+        Dict *vars;
+
 
         Server(std::string world_name, std::string name, int tickrate);
         ~Server();
