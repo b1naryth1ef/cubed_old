@@ -60,4 +60,13 @@ void Mod::compile() {
         return;
     }
 
+    // Now we call the on_load method of the plugin, every plugin should have this
+    // lua_getglobal(L, "on_load");
+    // res = lua_pcall(L, 0, 0, 0);
+
+    // if (res != 0) {
+    //     ERROR("Failed to call on_load for the mod %i!", res);
+    //     return;
+    // }
+
 }

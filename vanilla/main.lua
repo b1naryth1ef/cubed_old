@@ -1,9 +1,5 @@
-vblocks = require("blocks.lua")
+vblocks = require("blocks")
 
-function test()
-    print("It fucking worked?")
-end
-
-function main()
-    cubed.server.getActive()
+function on_load()
+    print("it loaded!")
 end
