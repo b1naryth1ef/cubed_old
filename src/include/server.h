@@ -4,6 +4,7 @@
 #include "world.h"
 #include "net.h"
 #include "util.h"
+#include "mod.h"
 
 class Server {
     public:
@@ -14,6 +15,8 @@ class Server {
 
         UDPService *udp_s;
         TCPService *tcp_s;
+
+        ModDex dex;
 
         // Server info
         // std::string s_name;

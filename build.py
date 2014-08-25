@@ -4,7 +4,9 @@ import os, sys, time, fnmatch, shutil
 
 # Linked libraries
 LIBRARIES = [
-    "sqlite3"
+    "sqlite3",
+    "lua",
+    "dl"
 ]
 
 # Included directories or files
@@ -35,17 +37,19 @@ def gen_flatc_command():
     return "flatc -o src/include/gen/ -c %s" % ' '.join(find_source_files("proto", ext=[".idl"]))
 
 def gen_build_command():
-    base = ["g++ -w -std=c++11 -o cubed.o"]
+    base = ["g++ -w -std=c++11"]
     base.append(" ".join(find_source_files(".")))
     base.append(" ".join(["-I%s" % i for i in INCLUDES]))
     base.append(" ".join(["-l%s" % i for i in LIBRARIES]))
     base.append(" ".join(["-D%s" % i for i in FLAGS]))
     base.append("-L/usr/local/lib")
+    base.append("-o cubed.o")
     return " ".join(base)
 
 def build():
     start = time.time()
     i = os.system(gen_flatc_command())
+    print gen_build_command()
     i = i or os.system(gen_build_command())
 
     return not bool(i), (time.time() - start)
