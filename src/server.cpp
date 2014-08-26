@@ -84,7 +84,9 @@ void Server::loadCvars() {
 
     sv_cheats = cvars->create("sv_cheats", "Allow changing of cheat protected variables");
     sv_name = cvars->create("sv_name", "A name for the server");
+
     sv_tickrate = cvars->create("sv_tickrate", "The servers tickrate");
+    sv_tickrate->rmvFlag(FLAG_USER_WRITE)->rmvFlag(FLAG_MOD_WRITE);
 
     sv_version = cvars->create("sv_version", "The servers version");
     sv_version->setInt(CUBED_VERSION);

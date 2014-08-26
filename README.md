@@ -1,17 +1,39 @@
+# Cubed
+Cubed is a slightly ambitious project to create a decent open-source Minecraft clone that aims to be efficient, extremely modular and extend-able, and smart. It was made to combat the drama that is the modding community and culture around minecraft, and has the following major goals:
 
+- A solid, extensive, fast Lua modding API that allows for creations of entirely new games.
+- A heavily abstracted base system written in C++ that defines now obvious gameplay rules or logic, but instead aims to be an efficient game engine
+- A "vanilla" mod written in Lua that represents a near-match to Vanilla minecraft.
 
-## Worlds
-A world in cubed is represented by a folder containing two items. The first is a world-defintion file specifiying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running.
+Cubed is in a sudo-state of development and experimentation right now, and welcomes contributors that want to get their feet wet in early stages of planning and implementation.
 
-### World Definition File
+## Running/Testing
+Cubed currently only targets Linux, with the goal of porting to Mac/Windows at a later state. To get cubed running on your *nix like box, you can run the following commands from the source directory:
+
+- `./build.py setup` (installs dependencies, headers, etc)
+- `./build.py run` runs the server
+
+Cubed aims to have a simple build system that allows most users to get up and running in mere minutes.
+
+## Compatibility
+Cubed has no goals to remain compatible with any portions of the minecraft ecosphere, however at some point the goal is to implement a minecraft -> cubed world converter.
+
+## Contributing
+Read the source, understand the format, fork, edit, PR, profit. Eventually we will put together a style guide.
+
+## Infrastructure
+
+### Worlds
+A world in cubed is represented by a folder containing two items. The first is a world-definition file specifying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running.
+
+#### World Definition File
 The world definition file contains the following three fields:
 
 1. "name", a lexical name for the world
 2. "version" an integer version of the world relating to the CUBED_WORLD_FORMAT_VERSION
 3. "origin", a start point of the world (AKA spawn point)
 
-
-### World Database File
+#### World Database File
 The world DB holds three major tables relating to the world
 
 1. "blocks" a table of (x, y, z) and type for each block
@@ -19,27 +41,17 @@ The world DB holds three major tables relating to the world
 3. "blockdata" a table of block data (to be designed/specified)
 
 
-# Networking Loop
+### Server
+The server represents a base class that handles the runtime environment of a server. It handles loaded worlds, modules, and everything else in between. Servers operate at a constant tickrate that can be set at startup, and have a single primary loop which updates everything in the server (which operates at said tickrate).
+
+#### Networking Loop
 - Accept clients
 - Dump clients (ServiceClient) into a vector inside Service
 - epoll on all the ServiceClient fd's, read data as Packet into a queue
-- Server iterates over the queue and parses messages one by one, special code to transalate to JSON if needed?
+- Server iterates over the queue and parses messages one by one, special code to translate to JSON if needed?
 
-# Threads
-- Server Main Loop
-- Networking Thread
-- Tick Update Thread
-
-
-# Requirements
-- https://github.com/miloyip/rapidjson
-
-
-
-## B1nz todos
-- Design/Implement some kind of non horrific cvar system. Dump to json, have read/write permissions, defaults, all that q3 sex without the uglyness of the files.
+# B1nz todos
+- Implement dumping/loading cvars from JSON files.
+- Design the "extra-data" system for blocks/entities/etc. What format? etc.
 - Implement client/server running inside build.py/main.cpp
 - Start working on plugin implementation
-
-## Lua API Questions
-- How can I define a import path of sorts? luaL_requiref??
