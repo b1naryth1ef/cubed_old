@@ -95,27 +95,6 @@ enum CStorageType {
     STORAGE_STRING
 };
 
-// enum VarType {
-//     FLAG_EMPTY = 1 << 0,
-//     FLAG_READ = 1 << 1,
-//     FLAG_WRITE = 1 << 2,
-//     FLAG_MEM = 1 << 3,
-// };
-
-// static const int FLAG_INIT = FLAG_READ | FLAG_WRITE;
-
-// void addFlag(int f) {
-//     this->flags |= f;
-// };
-
-// void rmvFlag(int f) {
-//     this->flags &= ~f;
-// };
-
-// bool hasFlag(int f) {
-//     return (this->flags & f);
-// };
-
 class Container {
     private:
         void ensureType(CStorageType t) {
@@ -134,19 +113,22 @@ class Container {
     public:
         CStorageType type;
 
-        void setInt(int i) {
+        Container *setInt(int i) {
             this->type = STORAGE_INT;
             this->value.i = i;
+            return this;
         }
 
-        void setDouble(double d) {
+        Container *setDouble(double d) {
             this->type = STORAGE_DOUBLE;
             this->value.d = d;
+            return this;
         }
 
-        void setString(std::string s) {
+        Container *setString(std::string s) {
             this->type = STORAGE_STRING;
             this->s = s;
+            return this;
         }
 
         int getInt() {

@@ -4,6 +4,7 @@
 #include "world.h"
 #include "net.h"
 #include "util.h"
+#include "cvar.h"
 
 class Server {
     public:
@@ -15,13 +16,11 @@ class Server {
         UDPService *udp_s;
         TCPService *tcp_s;
 
-        // Server info
-        // std::string s_name;
-        // int s_version;
-        int tickrate;
+        CVarDict *cvars;
 
-        Dict *vars;
+        CVar *sv_tickrate;
 
+        void load_cvars();
 
         Server(std::string world_name, std::string name, int tickrate);
         ~Server();
@@ -31,4 +30,7 @@ class Server {
 
         void main_loop();
         void net_loop();
+
+        // Cvar bindings
+        bool onCVarChange(CVar *cv, Container *from_value, Container *to_value);
 };
