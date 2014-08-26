@@ -109,4 +109,4 @@ if __name__ == "__main__":
             print "Errors during build, not running..."
             sys.exit(1)
 
-        os.system("./cubed.o")
+        os.system("./cubed.o %s" % ' '.join(sys.argv[2:]))

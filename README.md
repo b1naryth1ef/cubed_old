@@ -51,6 +51,8 @@ The server represents a base class that handles the runtime environment of a ser
 - Server iterates over the queue and parses messages one by one, special code to translate to JSON if needed?
 
 # B1nz todos
+- Get the cvar-change hooks working for server
+- Finish the networking implementations
 - Implement dumping/loading cvars from JSON files.
 - Design the "extra-data" system for blocks/entities/etc. What format? etc.
 - Implement client/server running inside build.py/main.cpp

@@ -24,8 +24,6 @@ Server::Server() {
         this->addWorld(w);
     }
 
-    this->udp_s = new UDPService();
-    this->udp_s->open(this->config.host_name, this->config.host_port);
 
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
@@ -35,14 +33,11 @@ Server::~Server() {
     for (auto v : this->worlds) {
         v.second->close();
     }
-
-    this->udp_s->close(-1);
 }
 
 void Server::serve_forever() {
     this->active = true;
     this->main_thread = std::thread(&Server::main_loop, this);
-    this->net_thread = std::thread(&Server::net_loop, this);
 }
 
 /*
@@ -66,17 +61,11 @@ void Server::tick() {
     for (auto w : this->worlds) {
         w.second->tick();
     }
-    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
-}
-
-void Server::net_loop() {
-    while (this->active) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
 }
 
 void Server::loadCvars() {
     this->cvars = new CVarDict();
+    // TODO: get this working
     //this->cvars->bind(this->onCVarChange);
 
     // TODO: implement this

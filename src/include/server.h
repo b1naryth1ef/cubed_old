@@ -24,11 +24,10 @@ class Server {
     public:
         std::map<std::string, World*> worlds;
 
-        std::thread main_thread, net_thread;
+        std::thread main_thread;
         bool active;
 
-        UDPService *udp_s;
-        TCPService *tcp_s;
+        NetService *server;
 
         ModDex dex;
         CVarDict *cvars;

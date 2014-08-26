@@ -15,8 +15,6 @@ class Client {
         std::string remote_host;
         short remote_port;
 
-        std::unordered_map<std::string, Channel *> channels;
-
         // Represents all blocks in-memory, air blocks must exist in this
         BlockCacheT blocks;
 

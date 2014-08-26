@@ -1,14 +1,22 @@
 #include "main.h"
 
-Server *s;
-Client *c;
+Server *s = nullptr;
+Client *c = nullptr;
 
 void catch_signal(int signum) {
     DEBUG("Recieved signal %d, attempting exit", signum);
-    s->active = false;
-    s->main_thread.join();
-    s->net_thread.join();
-    delete(s);
+
+    if (s != nullptr) {
+        s->active = false;
+        s->main_thread.join();
+        delete(s);
+    }
+
+    if (c != nullptr) {
+        c->active = false;
+        delete(c);
+    }
+
     exit(signum);
 }
 
@@ -16,9 +24,7 @@ void bind_signals() {
     signal(SIGINT, catch_signal);
 }
 
-int main(int argc, const char* argv[]) {
-    DEBUG("Arg Count: %i", argc);
-
+void run_server() {
     bind_signals();
 
     s = new Server();
@@ -27,4 +33,21 @@ int main(int argc, const char* argv[]) {
     while (s->active || c->active) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+}
+
+void run_client() {}
+
+int main(int argc, const char* argv[]) {
+    if (argc > 1) {
+        if (strcmp(argv[1], "client") == 0) {
+            run_client();
+            return 0;
+        } else if (strcmp(argv[1], "server") == 0) {
+            run_server();
+            return 0;
+        }
+    }
+
+    printf("Usage: ./cubed.o <client|server>\n");
+    return 1;
 }
