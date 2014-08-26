@@ -72,7 +72,18 @@ def setup_flatbuffers():
     os.chdir(start)
     os.system("rm -rf flatbuffers")
 
+def setup_liblua():
+    start = os.getcwd()
+    os.system("wget http://www.lua.org/ftp/lua-5.2.3.tar.gz")
+    os.system("tar xzvf lua-5.2.3.tar.gz")
+    os.chdir("lua-5.2.3")
+    os.system("make linux -j8")
+    os.system("sudo make install")
+    os.chdir(start)
+    os.system("rm -rf lua-5.2.3 lua-5.2.3.tar.gz")
+
 def setup():
+    setup_liblua()
     setup_rapidjson()
     setup_flatbuffers()
 
