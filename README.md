@@ -1,43 +1,23 @@
 
 
-# Types
+## Worlds
+A world in cubed is represented by a folder containing two items. The first is a world-defintion file specifiying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running.
 
-- Client
-- Server
+### World Definition File
+The world definition file contains the following three fields:
 
-- Entity
-    - Player
-
-- Material
-
-- Block
-    - StaticBlock
-    - DynamicBlock
-    - LiveBlock (+entity)
-
-- World
-    - Realm
-        - Region [(128 x 128 x 128) cube of block data]
-            - Block  
-
-# Serilization
-Protobuf for both network and on-disk data
+1. "name", a lexical name for the world
+2. "version" an integer version of the world relating to the CUBED_WORLD_FORMAT_VERSION
+3. "origin", a start point of the world (AKA spawn point)
 
 
-## World Format
-Directory Structure:
-    - world.json (contains name, version, etc)
-    - data.db (contains block data/etc, should be hugenormous)
-    - cache/ (contains block caches)
+### World Database File
+The world DB holds three major tables relating to the world
 
-### world.json
-Structure:
-```
-{
-    "name": "my awesome world",
-    "version": 1,
-}
-```
+1. "blocks" a table of (x, y, z) and type for each block
+2. "blocktypes" a table of block type ID's to block type names, used for managing mod loading/unloading when blocktypes are involved, and for faster operations on the blocks db
+3. "blockdata" a table of block data (to be designed/specified)
+
 
 # Networking Loop
 - Accept clients

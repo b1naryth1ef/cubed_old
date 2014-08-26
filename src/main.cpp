@@ -21,7 +21,7 @@ int main(int argc, const char* argv[]) {
 
     bind_signals();
 
-    s = new Server("testworld", "Test Server", 64);
+    s = new Server();
     s->serve_forever();
 
     while (s->active || c->active) {

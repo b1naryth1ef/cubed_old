@@ -32,11 +32,11 @@ enum CVarFlag {
 static int FLAG_DEFAULT = (FLAG_USER_READ | FLAG_USER_WRITE | FLAG_MOD_READ | FLAG_MOD_WRITE);
 
 class CVar: public Container {
-    private:
+    public:
         std::string name;
+        std::string desc;
         int flags;
 
-    public:
         CVar() {
             this->flags = FLAG_DEFAULT;
         }
@@ -53,6 +53,10 @@ class CVar: public Container {
 
         bool hasFlag(CVarFlag f) {
             return (this->flags & f);
+        }
+
+        CVar *setDesc(std::string d) {
+            this->desc = d;
         }
 
         Container *toContainer() {
@@ -75,18 +79,17 @@ class CVar: public Container {
 typedef bool (*CVarOnChange)(CVar *cv, Container *from_value, Container *to_value);
 
 class CVarDict {
-    private:
+    public:
         std::map<std::string, CVar*> data;
         std::vector<CVarOnChange *> bindings;
 
-    public:
         void bind(CVarOnChange *f) {
             this->bindings.push_back(f);
         }
 
         CVar *get(std::string k) {
             if (!this->data.count(k)) {
-                return this->create(k);
+                return this->create(k, "");
             }
             return data[k];
         }
@@ -95,8 +98,10 @@ class CVarDict {
             data[k] = v;
         }
 
-        CVar *create(std::string k) {
+        CVar *create(std::string k, std::string d) {
             CVar *v = new CVar();
+            v->name = k;
+            v->desc = d;
             data[k] = v;
             return v;
         }

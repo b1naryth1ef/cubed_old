@@ -30,6 +30,7 @@ bool ModDex::loadFromPath(std::string dir) {
     result.author = d["author"].GetString();
     result.version = d["version"].GetInt();
     result.path = dir;
+    result.dex = this;
 
     if (this->get(result.name) != nullptr) {
         ERROR("Mod with name %s already loaded!", result.name.c_str());
@@ -37,7 +38,7 @@ bool ModDex::loadFromPath(std::string dir) {
     }
 
     this->mods[result.name] = &result;
-    result.compile();
+    result.load();
 
     fclose(fp);
 
@@ -52,21 +53,42 @@ Mod *ModDex::get(std::string k) {
     return nullptr;
 }
 
-void Mod::compile() {
-    DEBUG("Attempting to compile mod %s", this->name.c_str());
-    int res = luaL_loadfile(L, ioutil::join(this->path, "main.lua").c_str());
+bool ModDex::eventPre(Event *e) {
+    DEBUG("Would fire pre on event %s", e->type.c_str());
+}
+
+bool ModDex::eventPost(Event *e) {
+    DEBUG("Would fire post on event %s", e->type.c_str());
+}
+
+void Mod::load() {
+    int res;
+    DEBUG("Attempting to load mod %s", this->name.c_str());
+
+    Event *e = new Event("mod_load");
+    e->data->setString("name", this->name);
+    e->data->setInt("version", this->version);
+    this->dex->eventPre(e);
+
+    if (e->cancelled) {
+        WARN("mod_load event for %s was cancelled, will not load.");
+        return;
+    }
+
+    res = luaL_dofile(L, ioutil::join(this->path, "main.lua").c_str());
     if (res != 0) {
-        ERROR("Failed to compile file %s!", ioutil::join(this->path, "main.lua").c_str());
+        ERROR("Failed to exceute file %s, %i!", ioutil::join(this->path, "main.lua").c_str(), res);
         return;
     }
 
     // Now we call the on_load method of the plugin, every plugin should have this
-    // lua_getglobal(L, "on_load");
-    // res = lua_pcall(L, 0, 0, 0);
+    lua_getglobal(L, "on_load");
+    res = lua_pcall(L, 0, 0, 0);
+    if (res != 0) {
+        ERROR("Failed to call on_load for the mod %i!", res);
+        return;
+    }
 
-    // if (res != 0) {
-    //     ERROR("Failed to call on_load for the mod %i!", res);
-    //     return;
-    // }
-
+    this->dex->eventPost(e);
+    DEBUG("Mod %s has been loaded!", this->name.c_str());
 }

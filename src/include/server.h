@@ -6,11 +6,24 @@
 #include "util.h"
 #include "cvar.h"
 #include "mod.h"
+#include "db.h"
+
+class ServerConfig {
+    public:
+        std::string name;
+        std::string host_name;
+        short host_port;
+
+        std::vector<std::string> worlds;
+        short tickrate;
+
+        void load();
+};
 
 class Server {
     public:
-        // TODO: allow multiple worlds
-        World *world;
+        std::map<std::string, World*> worlds;
+
         std::thread main_thread, net_thread;
         bool active;
 
@@ -18,14 +31,23 @@ class Server {
         TCPService *tcp_s;
 
         ModDex dex;
-
         CVarDict *cvars;
+        ServerConfig config;
+        DB *db;
 
+        // Server cvar handles
+        CVar *sv_cheats;
+        CVar *sv_name;
         CVar *sv_tickrate;
+        CVar *sv_version;
 
-        void load_cvars();
+        void addWorld(World *);
 
-        Server(std::string world_name, std::string name, int tickrate);
+        void loadCvars();
+
+        void setupDatabase();
+
+        Server();
         ~Server();
 
         void serve_forever();
@@ -37,3 +59,5 @@ class Server {
         // Cvar bindings
         bool onCVarChange(CVar *cv, Container *from_value, Container *to_value);
 };
+
+

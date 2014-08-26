@@ -4,3 +4,4 @@
 *.o
 *.log
 src/include/gen/
+*.db

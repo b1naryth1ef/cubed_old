@@ -6,11 +6,16 @@
 DB::DB(std::string path) {
     DEBUG("Opening SQLite table %s", path.c_str());
 
-    int rc = sqlite3_open(path.c_str(), &db);
+    this->is_new = !ioutil::file_exists(path);
+
+    int rc = sqlite3_open(path.c_str(), &this->db);
     if (rc) {
         ERROR("SQLite Open Error: %i", rc);
         throw Exception("Failed to open database file: " + rc);
     }
+
+    // Turn of sync-to-disk cuz fuck it
+    assert(sqlite3_exec(this->db, "PRAGMA synchronous = OFF", 0, 0, 0) == SQLITE_OK);
 }
 
 DB::~DB() {
@@ -32,7 +37,7 @@ bool DB::create() {
     }
 }
 
-void DB::add_table(std::string name, std::string sql, bool create) {
+void DB::addTable(std::string name, std::string sql, bool create) {
     DEBUG("Adding SQLite table %s", name.c_str());
 
     tables[name] = sql;
@@ -47,7 +52,7 @@ void DB::add_table(std::string name, std::string sql, bool create) {
     }
 }
 
-bool DB::drop_all() {
+bool DB::dropAll() {
     DEBUG("Dropping all SQLite tables");
 
     int res = sqlite3_exec(db,

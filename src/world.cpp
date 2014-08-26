@@ -12,24 +12,6 @@ void load_default_block_types(World *w, BlockTypeIndexT *bti) {
     // (*bti)[air_bt->type] = air_bt;
 }
 
-Point::Point(double x, double y, double z) {
-    this->x = x;
-    this->y = y;
-    this->z = z;
-}
-
-Point::Point(int x, int y, int z) {
-    this->x = x;
-    this->y = y;
-    this->z = z;
-}
-
-Point::Point(const Value &v) {
-    x = v[SizeType(0)].GetInt();
-    y = v[SizeType(1)].GetInt();
-    z = v[SizeType(2)].GetInt();
-}
-
 BlockType::BlockType(sqlite3_stmt *res) {
     this->id = sqlite3_column_int(res, 0);
     this->type = (char *)sqlite3_column_text(res, 1);
@@ -99,23 +81,18 @@ bool WorldFile::open() {
             this is a fatal error!");
     }
 
-    // Open the DB, optionally creating it for the first time if it doesnt exist
     std::string dbpath = ioutil::join(this->directory, "data.db");
-    bool createdb = !ioutil::file_exists(dbpath);
-
     this->db = new DB(dbpath);
 
-    if (createdb) {
+    // If this is a new db, create the tables
+    if (this->db->is_new) {
         DEBUG("Creating database for first time...");
-        create();
+        this->setupDatabase();
     }
 }
 
-bool WorldFile::create() {
-    // First create blocks database
+bool WorldFile::setupDatabase() {
     int err;
-    err = sqlite3_exec(db->db, "PRAGMA synchronous = OFF", 0, 0, 0);
-    // err = sqlite3_exec(db->db, "PRAGMA journal_mode = MEMORY", 0, 0, 0);
 
     err = sqlite3_exec(db->db, "CREATE TABLE blocktypes ("
         "id INTEGER PRIMARY KEY ASC,"
@@ -125,16 +102,18 @@ bool WorldFile::create() {
     ");", 0, 0, 0);
 
     err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
-        "id INTEGER PRIMARY KEY ASC,"
         "type INTEGER,"
         "x INTEGER,"
         "y INTEGER,"
-        "z INTEGER"
+        "z INTEGER,"
+        "PRIMARY KEY (x, y, z)"
     ");", 0, 0, 0);
 
-    err = sqlite3_exec(db->db, "CREATE INDEX blocks_full_coord ON blocks ("
-        "x ASC, y ASC, z ASC"
-    ");", 0, 0, 0);
+    // err = sqlite3_exec(db->db, "CREATE TABLE blockdata ();", 0, 0, 0);
+
+    // err = sqlite3_exec(db->db, "CREATE INDEX blocks_full_coord ON blocks ("
+    //     "x ASC, y ASC, z ASC"
+    // ");", 0, 0, 0);
 
     if (err != SQLITE_OK) {
         throw Exception("Error creating first-time world database...");
@@ -166,6 +145,15 @@ World::World(std::string path) {
     this->wf = new WorldFile(path);
     this->wf->open();
     this->db = this->wf->db;
+}
+
+bool World::tick() {
+    for (auto &e : this->entities) {
+        if (e->keepWorldLoadedAround()) {
+            // TOOD: generate the region of blocks we need to keep loaded
+            //  on this entity
+        }
+    }
 }
 
 bool World::load() {
@@ -223,13 +211,11 @@ bool World::loadBlock(Point p) {
 
     Block *b;
     sqlite3_stmt *stmt;
-    char *query = (char *) malloc(2048);
+    char query[2048];
     const char *ztail;
 
     sprintf(query, "SELECT * FROM blocks WHERE x=%F AND y=%F AND z=%F", p.x, p.y, p.z);
     int err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
-
-    free(query);
 
     if (err != SQLITE_OK) {
         throw Exception("Failed to load block, sql!");
@@ -284,14 +270,13 @@ bool World::addBlockType(BlockType *bt) {
     // Add to type_index
     (*this->type_index)[bt->id] = bt;
 
-    char *query = (char *) malloc(2048);
+    char query[2048];
     sprintf(query,
         "INSERT INTO blocktypes (type, owner, active)"
         "VALUES ('%s', 'test', 1);",
         bt->type.c_str());
 
     int res = sqlite3_exec(this->db->db, query, 0, 0, 0);
-    free(query);
 
     int id = sqlite3_last_insert_rowid(this->db->db);
     
@@ -367,10 +352,9 @@ Block *World::getBlockForced(Point p) {
 
 Block::Block(World *w, sqlite3_stmt *res) {
     this->world = w;
-    this->id = sqlite3_column_int(res, 0);
 
     // Load block type, if it doesnt exist in index assign it to null
-    int type = sqlite3_column_int(res, 1);
+    int type = sqlite3_column_int(res, 0);
     if (this->world->type_index->count(type) == 1) {
         this->type = (*this->world->type_index)[type];
     } else {
@@ -379,13 +363,13 @@ Block::Block(World *w, sqlite3_stmt *res) {
     }
 
     this->pos = new Point();
-    this->pos->x = sqlite3_column_int(res, 2);
-    this->pos->y = sqlite3_column_int(res, 3);
-    this->pos->z = sqlite3_column_int(res, 4);
+    this->pos->x = sqlite3_column_int(res, 1);
+    this->pos->y = sqlite3_column_int(res, 2);
+    this->pos->z = sqlite3_column_int(res, 3);
 }
 
 bool Block::save() {
-    char *query = (char *) malloc(2048);
+    char query[2048];
 
     sprintf(query,
         "INSERT INTO blocks (type, x, y, z)"
@@ -395,7 +379,6 @@ bool Block::save() {
     );
 
     int s = sqlite3_exec(this->world->db->db, query, 0, 0, 0);
-    free(query);
 
     if (s != SQLITE_OK) {
         ERROR("Failed to save block!");

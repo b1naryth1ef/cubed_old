@@ -1,28 +1,41 @@
 #include "server.h"
 
-Server::Server(std::string world_name, std::string name, int tickrate) {
+Server::Server() {
     DEBUG("Cubed v%i.%i.%i", CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C);
 
-    // Load the SQLite3 Module stuff
+    // Load the SQLite3 Module stuff TODO: move/rename?
     init_db_module();
 
     // Load the server cvars
-    this->load_cvars();
+    this->loadCvars();
+    this->config.load();
 
-    // Load the world (this is for testing)
-    this->world = new World(world_name);
-    this->world->load();
+    this->db = new DB("server.db");
+    if (this->db->is_new) {
+        this->setupDatabase();
+    }
 
-    this->sv_tickrate->setInt(tickrate);
+    this->sv_tickrate->setInt(this->config.tickrate);
+    this->sv_name->setString(this->config.name);
+
+    for (auto world_name : this->config.worlds) {
+        World *w = new World(world_name);
+        w->load();
+        this->addWorld(w);
+    }
 
     this->udp_s = new UDPService();
-    this->udp_s->open("0.0.0.0", 6060);
+    this->udp_s->open(this->config.host_name, this->config.host_port);
 
+    this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
 }
 
 Server::~Server() {
-    this->world->close();
+    for (auto v : this->worlds) {
+        v.second->close();
+    }
+
     this->udp_s->close(-1);
 }
 
@@ -50,7 +63,10 @@ void Server::main_loop() {
 }
 
 void Server::tick() {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (auto w : this->worlds) {
+        w.second->tick();
+    }
+    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void Server::net_loop() {
@@ -59,22 +75,70 @@ void Server::net_loop() {
     }
 }
 
-void Server::load_cvars() {
+void Server::loadCvars() {
     this->cvars = new CVarDict();
     //this->cvars->bind(this->onCVarChange);
 
     // TODO: implement this
     this->cvars->load("server.json");
 
-    // We make sure a bunch of stuff is loaded
-    this->cvars->get("sv_cheats");
-    this->cvars->get("sv_hostname");
-    this->cvars->get("sv_name");
-    this->sv_tickrate = this->cvars->get("sv_tickrate");
+    sv_cheats = cvars->create("sv_cheats", "Allow changing of cheat protected variables");
+    sv_name = cvars->create("sv_name", "A name for the server");
+    sv_tickrate = cvars->create("sv_tickrate", "The servers tickrate");
 
-    CVar *sv_version = this->cvars->get("sv_version");
+    sv_version = cvars->create("sv_version", "The servers version");
     sv_version->setInt(CUBED_VERSION);
     sv_version->rmvFlag(FLAG_USER_WRITE)->rmvFlag(FLAG_MOD_WRITE);
+
 }
 
 bool Server::onCVarChange(CVar *cv, Container *from_value, Container *to_value) {};
+
+void Server::addWorld(World *w) {
+    this->worlds[w->wf->name] = w;
+}
+
+void Server::setupDatabase() {
+    int err;
+
+    // err = sqlite3_exec(db->db, "CREATE TABLE mods ("
+    //     "id INTEGER PRIMARY KEY ASC,"
+    //     "name TEXT,"
+    //     "version INTEGER"
+    // ");", 0, 0, 0);
+
+    assert(err == SQLITE_OK);
+}
+
+void ServerConfig::load() {
+    FILE *fp = fopen("server.json", "r");
+
+    if (!fp) {
+        ERROR("Could not open server configuration file `server.json`!");
+        throw Exception("Failed to load server configuration file!");
+    }
+
+    char readBuffer[65536];
+    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+    Document d;
+
+    try {
+        d.ParseStream(is);
+    } catch (std::string e) {
+        ERROR("Error occured while parsing server configuration: %s", e.c_str());
+        throw Exception("Error occured while parsing server configuration!");
+    }
+
+    this->name = d["name"].GetString();
+    this->host_name = d["host"]["name"].GetString();
+    this->host_port = d["host"]["port"].GetInt();
+    this->tickrate = d["tickrate"].GetInt();
+
+    const Value& wrlds = d["worlds"];
+    for (Value::ConstValueIterator itr = wrlds.Begin(); itr != wrlds.End(); ++itr) {
+        this->worlds.push_back(itr->GetString());
+    }
+
+
+    fclose(fp);
+}

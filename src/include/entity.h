@@ -1,22 +1,25 @@
 #pragma once
 
 #include "global.h"
+#include "geo.h"
 
 class Entity {
     public:
-        // Whether this entity forces things around it to be loaded
-        bool does_force_load_around();
+        Point *pos;
 
-        // Whether this entity persists in the database
-        bool does_persist();
+        // The number of blocks around this entity to keep loaded, 0 is none
+        int keepWorldLoadedAround() { return 0; };
+
+        // Whether this entity persists in the world-database
+        bool doesPersist() { return false; };
 };
 
 class Player {
-    virtual bool does_force_load_around() {
-        return true;
+    virtual int keepWorldLoadedAround() {
+        return 64;
     }
 
-    virtual bool does_persist() {
+    virtual bool doesPersist() {
         return false;
     }
 };

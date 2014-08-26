@@ -1,5 +1,5 @@
-vblocks = require("blocks")
+blocks = require("vanilla.blocks")
 
 function on_load()
-    print("it loaded!")
+    blocks.load_blocks()
 end
