@@ -17,6 +17,8 @@ Server::Server(std::string world_name, std::string name, int tickrate) {
 
     this->udp_s = new UDPService();
     this->udp_s->open("0.0.0.0", 6060);
+
+    this->dex.loadFromPath("vanilla");
 }
 
 Server::~Server() {

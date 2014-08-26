@@ -60,3 +60,6 @@ Structure:
 - Design/Implement some kind of non horrific cvar system. Dump to json, have read/write permissions, defaults, all that q3 sex without the uglyness of the files.
 - Implement client/server running inside build.py/main.cpp
 - Start working on plugin implementation
+
+## Lua API Questions
+- How can I define a import path of sorts? luaL_requiref??

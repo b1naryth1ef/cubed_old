@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <sys/file.h>
 #include <signal.h>
+#include <unistd.h>
 
 // Json
 #include "rapidjson/document.h"
