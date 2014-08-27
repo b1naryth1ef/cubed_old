@@ -41,7 +41,7 @@ static int CUBED_VERSION = 1;
 
 static int CUBED_RELEASE_A = 0;
 static int CUBED_RELEASE_B = 0;
-static int CUBED_RELEASE_C = 1;
+static int CUBED_RELEASE_C = 2;
 
 #define DEBUG(x, ...)  LOG.L("DEBUG", x, ## __VA_ARGS__)
 #define WARN(x, ...)   LOG.L("WARN ", x, ## __VA_ARGS__)
