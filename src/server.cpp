@@ -24,7 +24,6 @@ Server::Server() {
         this->addWorld(w);
     }
 
-
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
 }
