@@ -6,21 +6,36 @@
 class Entity {
     public:
         Point *pos;
-        short health;
 
         // The number of blocks around this entity to keep loaded, 0 is none
         virtual int keepWorldLoadedAround() { return 0; };
 
         // Whether this entity persists in the world-database
         virtual bool doesPersist() { return false; };
+
+        virtual bool doesTakeDamage() { return false; };
+};
+
+class LivingEntity: public Entity {
+    public:
+        short health;
+        long int age;
+
+        virtual bool isAlive() { return health > 0; }
+
+        virtual bool doesTakeDamage() { return true; }
 };
 
 class Player {
-    int keepWorldLoadedAround() {
-        return 64;
-    }
+    public:
+        std::string name;
 
-    bool doesPersist() {
-        return false;
-    }
+
+        int keepWorldLoadedAround() {
+            return 64;
+        }
+
+        bool doesPersist() {
+            return false;
+        }
 };

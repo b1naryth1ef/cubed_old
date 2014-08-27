@@ -136,3 +136,11 @@ class World {
 
         bool loadBlockTypeIndex();
 };
+
+
+class Generator {
+    public:
+        uint seed;
+
+        void generate(World*, PointV);
+};
