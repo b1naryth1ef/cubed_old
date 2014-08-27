@@ -9,6 +9,7 @@ void catch_signal(int signum) {
     if (s != nullptr) {
         s->active = false;
         s->main_thread.join();
+        // s->shutdown();
         delete(s);
     }
 

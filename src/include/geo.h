@@ -41,6 +41,7 @@ struct pointEqualsFunc {
   }
 };
 
-typedef std::vector<Point*> PointV;
+typedef std::vector<Point*> PointPV;
+typedef std::vector<Point> PointV;
 
 

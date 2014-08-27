@@ -49,6 +49,8 @@ class Server {
         Server();
         ~Server();
 
+        void shutdown();
+
         void serve_forever();
         void tick();
 

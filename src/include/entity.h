@@ -6,6 +6,7 @@
 class Entity {
     public:
         Point *pos;
+        short health;
 
         // The number of blocks around this entity to keep loaded, 0 is none
         virtual int keepWorldLoadedAround() { return 0; };

@@ -89,6 +89,8 @@ bool WorldFile::open() {
         DEBUG("Creating database for first time...");
         this->setupDatabase();
     }
+
+    return true;
 }
 
 bool WorldFile::setupDatabase() {
@@ -118,6 +120,8 @@ bool WorldFile::setupDatabase() {
     if (err != SQLITE_OK) {
         throw Exception("Error creating first-time world database...");
     }
+
+    return true;
 }
 
 bool WorldFile::close() {
@@ -154,6 +158,32 @@ bool World::tick() {
             //  on this entity
         }
     }
+
+    if (this->blockQueue.size()) {
+        int incr = 0;
+        DEBUG("Have %i queued blocks...", this->blockQueue.size());
+        while (this->blockQueue.size()) {
+            Block *b = this->blockQueue.front();
+            this->blockQueue.pop();
+
+            if (this->blocks.count((* b->pos))) {
+                WARN(
+                    "A block in the blockQueue was already loaded, assuming "
+                    "a previous entry is more accurate and skipping."
+                );
+                continue;
+            }
+
+            this->blocks[(* b->pos)] = b;
+
+            if (incr++ > 2048) {
+                WARN("Too many blocks in queue, waiting tell next tick to load more...");
+                break;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool World::load() {
@@ -166,18 +196,20 @@ bool World::load() {
     Timer t = Timer();
     t.start();
 
-    sqlite3_exec(db->db, "BEGIN TRANSACTION", 0, 0, 0);
+    PointV *initial = new PointV;
     for (int x = 0; x < 32; x++) {
         for (int y = 0; y < 32; y++) {
             for (int z = 0; z < 32; z++) {
-                this->loadBlock(Point(x, y, z));
+                initial->push_back(Point(x, y, z));
             }
         }
     }
-    sqlite3_exec(db->db, "END TRANSACTION", 0, 0, 0);
+
+    this->loadBlocksAsync(initial, true);
 
     DEBUG("Loading initial block set took %ims", t.end());
 
+    return true;
 }
 
 World::~World() {
@@ -189,9 +221,26 @@ bool World::close() {
     return true;
 }
 
+bool World::loadBlocksAsync(PointV *points, bool cleanup) {
+    THREAD([this, points, cleanup](){
+        Timer t = Timer();
+        t.start();
+        DEBUG("Starting asynchronous loading of %i points...", points->size());
+        for (auto p : (*points)) {
+            this->loadBlock(p, true);
+        }
+        DEBUG("Finished asynchronous loading of points in %ims!", t.end());
+        if (cleanup) {
+            delete(points);
+        }
+    });
+
+    return true;
+}
+
 bool World::loadBlocks(PointV points) {
     for (auto i : points) {
-        this->loadBlock(*i);
+        this->loadBlock(i);
     }
 
     return true;
@@ -203,7 +252,7 @@ bool World::loadBlocks(PointV points) {
     exist at all, a new air block will be created and added to BOTH the
     database and block cache.
 */
-bool World::loadBlock(Point p) {
+bool World::loadBlock(Point p, bool safe) {
     // If the block already exists, skip this
     if (blocks.count(p)) {
         return false;
@@ -211,29 +260,39 @@ bool World::loadBlock(Point p) {
 
     Block *b;
     sqlite3_stmt *stmt;
-    char query[2048];
     const char *ztail;
 
-    sprintf(query, "SELECT * FROM blocks WHERE x=%F AND y=%F AND z=%F", p.x, p.y, p.z);
-    int err = sqlite3_prepare_v2(db->db, query, 100, &stmt, &ztail);
-
-    if (err != SQLITE_OK) {
-        throw Exception("Failed to load block, sql!");
-    }
+    sqlite3_prepare_v2(db->db, "SELECT * FROM blocks WHERE x=? AND y=? AND z=?", 100, &stmt, &ztail);
+    sqlite3_bind_double(stmt, 1, p.x);
+    sqlite3_bind_double(stmt, 2, p.y);
+    sqlite3_bind_double(stmt, 3, p.z);
 
     int s = sqlite3_step(stmt);
     if (s == SQLITE_ROW) {
         b = new Block(this, stmt);
-        blocks[p] = b;
+        if (safe) {
+            this->blockQueue.push(b);
+        } else {
+            blocks[p] = b;
+        }
+
     } else if (s == SQLITE_DONE) {
         DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
         b = new Block(this, p.copy(), this->findBlockType("air"));
         b->world = this;
-        blocks[p] = b;
+
+        if (safe) {
+            this->blockQueue.push(b);
+        } else {
+            blocks[p] = b;
+        }
+
         b->save();
     } else {
         throw Exception("Failed to load block, query!");
     }
+
+    sqlite3_finalize(stmt);
 
     return true;
 }

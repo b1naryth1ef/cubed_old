@@ -30,8 +30,17 @@ Server::Server() {
 }
 
 Server::~Server() {
+    this->shutdown();
+}
+
+void Server::shutdown() {
     for (auto v : this->worlds) {
         v.second->close();
+    }
+
+    DEBUG("Joining %i thread-pool threads", THREAD_POOL.size());
+    for (auto &t : THREAD_POOL) {
+        t->join();
     }
 }
 
@@ -83,14 +92,12 @@ void Server::loadCvars() {
 
 }
 
-bool Server::onCVarChange(CVar *cv, Container *from_value, Container *to_value) {};
-
 void Server::addWorld(World *w) {
     this->worlds[w->wf->name] = w;
 }
 
 void Server::setupDatabase() {
-    int err;
+    int err = SQLITE_OK;
 
     // err = sqlite3_exec(db->db, "CREATE TABLE mods ("
     //     "id INTEGER PRIMARY KEY ASC,"
@@ -133,3 +140,7 @@ void ServerConfig::load() {
 
     fclose(fp);
 }
+
+bool Server::onCVarChange(CVar *cv, Container *from_value, Container *to_value) {
+    return false;
+};

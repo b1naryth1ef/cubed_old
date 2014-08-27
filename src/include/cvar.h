@@ -57,6 +57,7 @@ class CVar: public Container {
 
         CVar *setDesc(std::string d) {
             this->desc = d;
+            return this;
         }
 
         Container *toContainer() {

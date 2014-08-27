@@ -24,7 +24,7 @@ Read the source, understand the format, fork, edit, PR, profit. Eventually we wi
 ## Infrastructure
 
 ### Worlds
-A world in cubed is represented by a folder containing two items. The first is a world-definition file specifying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running.
+A world in cubed is represented by a folder containing two items. The first is a world-definition file specifying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running. World's allow both sync and async block loading from disk allowing for fairly good performance on loading large chunks from the world, although there are still areas that need improvment. On disk, around 2 million blocks equates to 60 or so MB, and that takes about 50 seconds to load async.
 
 #### World Definition File
 The world definition file contains the following three fields:
@@ -51,6 +51,7 @@ The server represents a base class that handles the runtime environment of a ser
 - Server iterates over the queue and parses messages one by one, special code to translate to JSON if needed?
 
 # B1nz todos
+- Do some lifecycle management and get a hold on some memory leaks
 - Get the cvar-change hooks working for server
 - Finish the networking implementations
 - Implement dumping/loading cvars from JSON files.

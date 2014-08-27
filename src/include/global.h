@@ -46,3 +46,6 @@ static int CUBED_RELEASE_C = 1;
 #define DEBUG(x, ...)  LOG.L("DEBUG", x, ## __VA_ARGS__)
 #define WARN(x, ...)   LOG.L("WARN ", x, ## __VA_ARGS__)
 #define ERROR(x, ...)  LOG.L("ERROR", x, ## __VA_ARGS__)
+#define THREAD(...) THREAD_POOL.push_back(new std::thread(__VA_ARGS__))
+
+static std::vector<std::thread *> THREAD_POOL;

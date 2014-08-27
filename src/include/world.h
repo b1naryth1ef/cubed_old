@@ -100,6 +100,10 @@ class World {
         std::vector<Entity *> entities;
         DB *db;
 
+        // This is a queue of async loaded blocks that need to be added
+        //  on the main loop.
+        std::queue<Block *> blockQueue;
+
         World(WorldFile *wf);
         World(std::string path);
         ~World();
@@ -111,10 +115,13 @@ class World {
         // Rebuilds all block caches
         void recache();
 
+        bool loadBlocksAsync(PointV *, bool cleanup = true);
+
         // Attempts to load a set of blocks
         bool loadBlocks(PointV);
+
         // Attempts to load a single block
-        bool loadBlock(Point);
+        bool loadBlock(Point, bool safe = false);
 
         // Gets a block at point P from cache or returns null
         Block *getBlock(Point);
