@@ -18,10 +18,9 @@ class Point {
         }
 
         std::string debug() {
-            char *x;
+            char x[512];
             sprintf(x, "Point<%F, %F, %F>", x, y, z);
             std::string result = std::string(x);
-            free(x);
             return result;
         }
 };

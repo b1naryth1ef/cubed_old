@@ -6,6 +6,7 @@ class DB {
     public:
         sqlite3 *db;
         std::map<std::string, std::string> tables;
+        std::map<std::string, sqlite3_stmt*> cached;
         bool is_new;
 
         DB(std::string path);
@@ -16,6 +17,8 @@ class DB {
         bool dropAll();
         bool drop(std::string table);
 
+        bool addCached(std::string, std::string);
+        sqlite3_stmt *getCached(std::string);
         void begin();
         void end();
 };

@@ -2,6 +2,7 @@
 
 #include "db.h"
 
+const char *ztail;
 
 DB::DB(std::string path) {
     DEBUG("Opening SQLite table %s", path.c_str());
@@ -19,7 +20,9 @@ DB::DB(std::string path) {
 }
 
 DB::~DB() {
+    DEBUG("Closing database...");
     sqlite3_close(db);
+    DEBUG("Database closed.");
 }
 
 bool DB::create() {
@@ -74,6 +77,16 @@ void DB::begin() {
 
 void DB::end() {
     assert(sqlite3_exec(this->db, "END TRANSACTION;", 0, 0, 0) == SQLITE_OK);
+}
+
+bool DB::addCached(std::string name, std::string query) {
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(this->db, query.c_str(), 256, &stmt, &ztail);
+    this->cached[name] = stmt;
+}
+
+sqlite3_stmt *DB::getCached(std::string name) {
+    return this->cached[name];
 }
 
 // Should be called on startup, makes sure SQLite is configured correctly

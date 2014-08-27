@@ -14,7 +14,6 @@ static const int SUPPORTED_WORLD_FILE_VERSION = 1;
 static const int BLOCK_TYPE_NULL = 1;
 static const int BLOCK_TYPE_AIR = 2;
 
-
 // Forward declare everything
 class BlockType;
 class Block;
@@ -102,6 +101,7 @@ class World {
         // This is a queue of async loaded blocks that need to be added
         //  on the main loop.
         std::queue<Block *> blockQueue;
+        std::mutex blockQueueLock;
 
         World(WorldFile *wf);
         World(std::string path);
