@@ -5,3 +5,4 @@
 *.log
 src/include/gen/
 *.db
+cubed

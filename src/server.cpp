@@ -75,7 +75,7 @@ void Server::tick() {
 void Server::loadCvars() {
     this->cvars = new CVarDict();
     // TODO: get this working
-    //this->cvars->bind(this->onCVarChange);
+    this->cvars->bind(&serverOnCVarChange);
 
     // TODO: implement this
     this->cvars->load("server.json");
@@ -141,6 +141,6 @@ void ServerConfig::load() {
     fclose(fp);
 }
 
-bool Server::onCVarChange(CVar *cv, Container *from_value, Container *to_value) {
+static bool serverOnCVarChange(CVar *cv, Container *from_value, Container *to_value) {
     return false;
 };

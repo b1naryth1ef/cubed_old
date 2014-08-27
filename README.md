@@ -52,9 +52,7 @@ The server represents a base class that handles the runtime environment of a ser
 
 # B1nz todos
 - Do some lifecycle management and get a hold on some memory leaks
-- Get the cvar-change hooks working for server
 - Finish the networking implementations
 - Implement dumping/loading cvars from JSON files.
 - Design the "extra-data" system for blocks/entities/etc. What format? etc.
-- Implement client/server running inside build.py/main.cpp
 - Start working on plugin implementation

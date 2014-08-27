@@ -49,3 +49,9 @@ static int CUBED_RELEASE_C = 1;
 #define THREAD(...) THREAD_POOL.push_back(new std::thread(__VA_ARGS__))
 
 static std::vector<std::thread *> THREAD_POOL;
+
+class Client;
+class Server;
+
+static Server *s = nullptr;
+static Client *c = nullptr;

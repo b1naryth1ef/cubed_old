@@ -82,9 +82,9 @@ typedef bool (*CVarOnChange)(CVar *cv, Container *from_value, Container *to_valu
 class CVarDict {
     public:
         std::map<std::string, CVar*> data;
-        std::vector<CVarOnChange *> bindings;
+        std::vector<CVarOnChange> bindings;
 
-        void bind(CVarOnChange *f) {
+        void bind(CVarOnChange f) {
             this->bindings.push_back(f);
         }
 

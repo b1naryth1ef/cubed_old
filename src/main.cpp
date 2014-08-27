@@ -1,8 +1,5 @@
 #include "main.h"
 
-Server *s = nullptr;
-Client *c = nullptr;
-
 void catch_signal(int signum) {
     DEBUG("Recieved signal %d, attempting exit", signum);
 

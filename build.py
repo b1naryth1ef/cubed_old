@@ -43,7 +43,7 @@ def gen_build_command():
     base.append(" ".join(["-l%s" % i for i in LIBRARIES]))
     base.append(" ".join(["-D%s" % i for i in FLAGS]))
     base.append("-L/usr/local/lib")
-    base.append("-o cubed.o")
+    base.append("-o cubed")
     return " ".join(base)
 
 def build():
@@ -109,4 +109,4 @@ if __name__ == "__main__":
             print "Errors during build, not running..."
             sys.exit(1)
 
-        os.system("./cubed.o %s" % ' '.join(sys.argv[2:]))
+        os.system("./cubed %s" % ' '.join(sys.argv[2:]))
