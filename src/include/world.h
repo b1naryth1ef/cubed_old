@@ -51,7 +51,6 @@ class Block {
         BlockType *type;
         Point *pos;
 
-
         Block(World *w, sqlite3_stmt *res);
 
         Block(World *w, Point *pos) {

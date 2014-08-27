@@ -1,17 +1,17 @@
 #include "world.h"
 
+// Loads the default null and air block types into a BlockTypeIndex
 void load_default_block_types(World *w, BlockTypeIndexT *bti) {
     DEBUG("Loading default block types...");
 
     BlockType *null_bt = new BlockType("null", false);
     w->addBlockType(null_bt);
-    // (*bti)[null_bt->type] = null_bt;
 
     BlockType *air_bt = new BlockType("air", false);
     w->addBlockType(air_bt);
-    // (*bti)[air_bt->type] = air_bt;
 }
 
+// Creates a new block type from a blocktype SQLite row
 BlockType::BlockType(sqlite3_stmt *res) {
     this->id = sqlite3_column_int(res, 0);
     this->type = (char *)sqlite3_column_text(res, 1);
@@ -19,18 +19,23 @@ BlockType::BlockType(sqlite3_stmt *res) {
     this->active = sqlite3_column_int(res, 3);
 }
 
+// Creates a new WorldFile from a directory path
 WorldFile::WorldFile(std::string dir) {
     directory = dir;
 }
 
+// Cleanly closes a WorldFile
 WorldFile::~WorldFile() {
     close();
 }
 
+// Attempts to open a WorldFile
 bool WorldFile::open() {
     DEBUG("Attempting to open worldfile...");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
+
+    // We could not properly open the file
     if (!fp) {
         ERROR("Failed to open world file!");
         throw Exception("Failed to open world file!");
@@ -41,7 +46,6 @@ bool WorldFile::open() {
     int lock_result = flock(fileno(fp), LOCK_EX | LOCK_NB);
     if (lock_result != 0) {
         ERROR("Error getting lock: %i", lock_result);
-
         throw Exception("Error occured getting lock for world file!");
     }
 
@@ -93,6 +97,7 @@ bool WorldFile::open() {
     return true;
 }
 
+// Do a first-time setup on the WorldFile database
 bool WorldFile::setupDatabase() {
     int err;
 
@@ -124,6 +129,7 @@ bool WorldFile::setupDatabase() {
     return true;
 }
 
+// Safely close the WorldFile
 bool WorldFile::close() {
     if (!fp) { return false; }
 
@@ -140,17 +146,20 @@ bool WorldFile::close() {
     return true;
 }
 
+// Create a new World from a WorldFile
 World::World(WorldFile *wf) {
     this->wf = wf;
     this->db = wf->db;
 }
 
+// Load a new World and WorldFile from a path
 World::World(std::string path) {
     this->wf = new WorldFile(path);
     this->wf->open();
     this->db = this->wf->db;
 }
 
+// Update the world for this tick
 bool World::tick() {
     for (auto &e : this->entities) {
         if (e->keepWorldLoadedAround()) {
@@ -193,9 +202,7 @@ bool World::load() {
     this->loadBlockTypeIndex();
     load_default_block_types(this, this->type_index);
 
-    Timer t = Timer();
-    t.start();
-
+    // Allocate a new Point vector, this is deleted in loadBlocksAsync
     PointV *initial = new PointV;
     for (int x = 0; x < 32; x++) {
         for (int y = 0; y < 32; y++) {
@@ -205,9 +212,8 @@ bool World::load() {
         }
     }
 
+    // Fire off an async job to load in all the blocks
     this->loadBlocksAsync(initial, true);
-
-    DEBUG("Loading initial block set took %ims", t.end());
 
     return true;
 }
@@ -221,6 +227,14 @@ bool World::close() {
     return true;
 }
 
+/*
+    This function takes a vector of points, and attempts to asynchrounously
+    load all the blocks at the points in the array into the working blockset.
+    If a block that is requested in this request is already loaded, it will
+    NOT be reloaded and instead ignored (which may on a rare change cause
+    a conflict, beware of this!). If cleanup is true, the function will
+    cleanup the Point vector after it's finished.
+*/
 bool World::loadBlocksAsync(PointV *points, bool cleanup) {
     THREAD([this, points, cleanup](){
         Timer t = Timer();
@@ -250,7 +264,11 @@ bool World::loadBlocks(PointV points) {
     Attempts to load a block at Point p. If the block exists in the cache,
     it will NOT be loaded and this will return false. If the block does not
     exist at all, a new air block will be created and added to BOTH the
-    database and block cache.
+    database and block cache. If safe is true, this will force the world
+    to only pickup the new block on the next tick, which should be used
+    for ANY async or threaded call to this function. In the case that safe
+    is true, and the world loads the same block at Point P BEFORE the next
+    tick is called, the block loaded within this call will be ignored.
 */
 bool World::loadBlock(Point p, bool safe) {
     // If the block already exists, skip this
@@ -383,6 +401,9 @@ bool World::loadBlockTypeIndex() {
             throw Exception("Failed to load block type index, query-parse!");
         }
     }
+
+    sqlite3_finalize(stmt);
+    return true;
 }
 
 /*
