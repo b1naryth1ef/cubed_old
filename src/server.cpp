@@ -27,6 +27,8 @@ Server::Server() {
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
 
+    this->server = new NetServer(this->config.host_name, this->config.host_port);
+
     // Dict test;
     // test.setString("string", "test");
     // test.setInt("int", 1);
@@ -81,8 +83,7 @@ void Server::loadCvars() {
 
     this->cvars->bind(std::bind(&Server::onCVarChange, this,
         std::placeholders::_1,
-        std::placeholders::_2,
-        std::placeholders::_3));
+        std::placeholders::_2));
 
     // TODO: implement this
     this->cvars->load("server.json");

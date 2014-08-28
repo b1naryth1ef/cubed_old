@@ -27,7 +27,7 @@ class Server {
         std::thread main_thread;
         bool active;
 
-        NetService *server;
+        NetServer *server;
 
         ModDex dex;
         CVarDict *cvars;

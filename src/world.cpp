@@ -188,6 +188,10 @@ bool World::tick() {
             Block *b = this->blockQueue.front();
             this->blockQueue.pop();
 
+            /*
+                Very unlikely edge case, has to be loaded AFTER we put the
+                block in the queue, but BEFORE the next world tick.
+            */
             if (this->blocks.count((* b->pos))) {
                 WARN(
                     "A block in the blockQueue was already loaded, assuming "
@@ -198,7 +202,7 @@ bool World::tick() {
 
             this->blocks[(* b->pos)] = b;
 
-            if (incr++ > 2048) {
+            if (incr++ > 4096) {
                 WARN("Too many blocks in queue, waiting tell next tick to load more...");
                 break;
             }
