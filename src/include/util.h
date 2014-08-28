@@ -195,25 +195,27 @@ class Dict {
             return c;
         }
 
-        // Document *toJSON() {
-        //     Document result;
-
-        //     for (auto &kv : this->data) {
-        //         Value v;
-
-        //         if (kv.second->type == STORAGE_INT) {
-        //             v.SetInt(kv.second->getInt());
-        //         } else if (kv.second->type == STORAGE_STRING) {
-        //             v.setString(kv.second->getString());
-        //         } else if (kv.second->type == STORAGE_DOUBLE) {
-        //             v.setDouble(kv.second->getDouble());
-        //         }
-
-        //         result.addMember(kv.first, v);
-        //     }
+        Document *toJSON() {
+            Document result;
+            result.SetObject();
             
-        //     return result;
-        // }
+            for (auto &kv : this->data) {
+                Value k(kv.first.c_str(), result.GetAllocator());
 
-        bool fromJSON(Document *d){}
+                if (kv.second->type == STORAGE_INT) {
+                    Value v(kv.second->getInt());
+                    result.AddMember(k, v, result.GetAllocator());
+                } else if (kv.second->type == STORAGE_STRING) {
+                    Value v(kv.second->getString().c_str(), result.GetAllocator());
+                    result.AddMember(k, v, result.GetAllocator());
+                } else if (kv.second->type == STORAGE_DOUBLE) {
+                    Value v(kv.second->getDouble());
+                    result.AddMember(k, v, result.GetAllocator());
+                }
+            }
+
+            return &result;
+        }
+
+        bool fromJSON(Document *d) {}
 };

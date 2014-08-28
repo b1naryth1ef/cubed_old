@@ -26,6 +26,8 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/filereadstream.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/filestream.h"
 
 // Sqlite3
 #include <sqlite3.h> 

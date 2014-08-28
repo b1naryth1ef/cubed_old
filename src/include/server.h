@@ -56,7 +56,6 @@ class Server {
 
         void main_loop();
         void net_loop();
+
+        bool onCVarChange(CVar *, Container *);
 };
-
-static bool serverOnCVarChange(CVar *cv, Container *from_value, Container *to_value);
-

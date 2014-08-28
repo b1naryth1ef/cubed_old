@@ -18,6 +18,8 @@ static CVar *sv_cheats = dict.get("sv_cheats");
 
 sv_cheats.getInt();
 
+TODO: rethink all this bullshit :(
+
 */
 
 enum CVarFlag {
@@ -75,14 +77,40 @@ class CVar: public Container {
             }
             return c;
         }
+
+        void fromContainer(Container *c) {
+            switch (c->type) {
+                case STORAGE_INT:
+                    this->setInt(c->getInt());
+                    break;
+                case STORAGE_DOUBLE:
+                    this->setDouble(c->getDouble());
+                    break;
+                case STORAGE_STRING:
+                    this->setString(c->getString());
+                    break;
+            }
+        }
 };
 
-typedef bool (*CVarOnChange)(CVar *cv, Container *from_value, Container *to_value);
+typedef std::function<bool (CVar *, Container *)> CVarOnChange;
 
 class CVarDict {
     public:
         std::map<std::string, CVar*> data;
         std::vector<CVarOnChange> bindings;
+
+        bool change(std::string k, Container *newc) {
+            CVar *cvar = this->get(k);
+
+            for (auto &f : this->bindings) {
+                if (!f(cvar, newc)) {
+                    break;
+                }
+            }
+
+            cvar->fromContainer(newc);
+        }
 
         void bind(CVarOnChange f) {
             this->bindings.push_back(f);

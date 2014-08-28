@@ -26,6 +26,11 @@ Server::Server() {
 
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
+
+    // Dict test;
+    // test.setString("string", "test");
+    // test.setInt("int", 1);
+    // test.setDouble("double", 1.342342);
 }
 
 Server::~Server() {
@@ -73,8 +78,11 @@ void Server::tick() {
 
 void Server::loadCvars() {
     this->cvars = new CVarDict();
-    // TODO: get this working
-    this->cvars->bind(&serverOnCVarChange);
+
+    this->cvars->bind(std::bind(&Server::onCVarChange, this,
+        std::placeholders::_1,
+        std::placeholders::_2,
+        std::placeholders::_3));
 
     // TODO: implement this
     this->cvars->load("server.json");
@@ -140,6 +148,7 @@ void ServerConfig::load() {
     fclose(fp);
 }
 
-static bool serverOnCVarChange(CVar *cv, Container *from_value, Container *to_value) {
+bool Server::onCVarChange(CVar *cv, Container *new_value) {
+    DEBUG("onCVarChange!");
     return false;
 };
