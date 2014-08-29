@@ -27,7 +27,7 @@ Server::Server() {
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
 
-    this->server = new NetServer(this->config.host_name, this->config.host_port);
+    this->tcps = new TCPServer(this->config.host_name, this->config.host_port);
 
     // Dict test;
     // test.setString("string", "test");
