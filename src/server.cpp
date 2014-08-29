@@ -79,13 +79,13 @@ void Server::main_loop() {
 }
 
 void Server::tick() {
-    this->clients_mutex.lock();
-    for (auto c : this->clients) {
-        if (c.second->packet_buffer.size()) {
-            DEBUG("Have a packet :D");
-        }
-    }
-    this->clients_mutex.unlock();
+    // this->clients_mutex.lock();
+    // for (auto c : this->clients) {
+    //     if (c.second->packet_buffer.size()) {
+    //         DEBUG("Have a packet :D");
+    //     }
+    // }
+    // this->clients_mutex.unlock();
 
     for (auto w : this->worlds) {
         w.second->tick();
@@ -169,6 +169,7 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
 };
 
 bool Server::onTCPConnectionOpen(TCPClient *c) {
+    DEBUG("Adding TCPClient...");
     RemoteClient *rc = new RemoteClient();
     rc->state = STATE_NEW;
     rc->tcp = c;
@@ -176,13 +177,14 @@ bool Server::onTCPConnectionOpen(TCPClient *c) {
     c->id = rc->id;
 
     this->clients_mutex.lock();
-    this->clients[rc->id];
+    this->clients[rc->id] = rc;
     this->clients_mutex.unlock();
 
     return true;
 }
 
 bool Server::onTCPConnectionClose(TCPClient *c) {
+    DEBUG("Removing TCPClient...");
     this->clients_mutex.lock();
     this->clients.erase(this->clients.find(c->id));
     this->clients_mutex.unlock();
@@ -192,7 +194,8 @@ bool Server::onTCPConnectionClose(TCPClient *c) {
 }
 
 bool Server::onTCPConnectionData(TCPClient *c) {
-    this->clients[c->id].tryParse();
+    DEBUG("Running tryparse on client %i", c->id);
+    this->clients[c->id]->tryParse();
     return true;
 }
 

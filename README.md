@@ -43,15 +43,8 @@ The world DB holds three major tables relating to the world
 ### Server
 The server represents a base class that handles the runtime environment of a server. It handles loaded worlds, modules, and everything else in between. Servers operate at a constant tickrate that can be set at startup, and have a single primary loop which updates everything in the server (which operates at said tickrate).
 
-#### Networking Loop
-- Accept clients
-- Dump clients (ServiceClient) into a vector inside Service
-- epoll on all the ServiceClient fd's, read data as Packet into a queue
-- Server iterates over the queue and parses messages one by one, special code to translate to JSON if needed?
-
 # B1nz todos
 - Do some lifecycle management and get a hold on some memory leaks
-- Finish the networking implementations
 - Implement dumping/loading cvars from JSON files.
 - Design the "extra-data" system for blocks/entities/etc. What format? etc.
 - Start working on plugin implementation

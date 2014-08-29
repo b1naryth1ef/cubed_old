@@ -187,9 +187,15 @@ void TCPServer::closeRemote(int rid) {
 }
 
 void RemoteClient::tryParse() {
-    if (!c.second->buffer.size()) {
+    if (!this->tcp->buffer.size()) {
         return;
     }
 
+    cubednet::Packet packet;
+    if (!packet.ParseFromArray(&this->tcp->buffer[0], this->tcp->buffer.size())) {
+        WARN("Failed to parse data, assuming we need more...");
+        return;
+    }
 
+    DEBUG("PACKET: %i, DATA-SIZE: %i", packet.pid(), packet.data().size());
 }

@@ -6,7 +6,9 @@ import os, sys, time, fnmatch, shutil
 LIBRARIES = [
     "sqlite3",
     "lua",
-    "dl"
+    "dl",
+    "protobuf",
+    "pthread"
 ]
 
 # Included directories or files
@@ -30,15 +32,17 @@ def find_source_files(start_dir, ext=[".cpp", ".c"]):
                 result.append(os.path.join(path, fname))
     return result
 
-def gen_flatc_command():
+def get_protobuf_command():
     if not os.path.exists("src/include/gen"):
         os.mkdir("src/include/gen")
 
-    return "flatc -o src/include/gen/ -c %s" % ' '.join(find_source_files("proto", ext=[".idl"]))
+    return "protoc --cpp_out=src/include/gen/ --proto_path=proto/ %s" % ' '.join(
+        find_source_files("proto", ext=[".proto"]))
 
 def gen_build_command():
     base = ["g++ -w -std=c++11"]
     base.append(" ".join(find_source_files(".")))
+    base.append(" ".join(find_source_files("src/include/gen", ext=[".cc"])))
     base.append(" ".join(["-I%s" % i for i in INCLUDES]))
     base.append(" ".join(["-l%s" % i for i in LIBRARIES]))
     base.append(" ".join(["-D%s" % i for i in FLAGS]))
@@ -48,7 +52,7 @@ def gen_build_command():
 
 def build():
     start = time.time()
-    i = os.system(gen_flatc_command())
+    i = os.system(get_protobuf_command())
     print gen_build_command()
     i = i or os.system(gen_build_command())
 

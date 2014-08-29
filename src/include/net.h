@@ -2,11 +2,10 @@
 
 #include "global.h"
 
-#include "flatbuffers/flatbuffers.h"
+// #include "flatbuffers/flatbuffers.h"
 
 // generated Files
-#include "gen/packet_generated.h"
-#include "gen/handshake_generated.h"
+#include "gen/packet.pb.h"
 
 // TODO: cut down
 #include <stdio.h>
@@ -22,6 +21,10 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <sys/epoll.h>
+
+enum PacketType {
+    PACKET_HELLO
+};
 
 class Packet {};
 

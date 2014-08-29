@@ -1,9 +1,0 @@
-namespace cubed;
-
-table Packet {
-    uid: short;
-    tag: short;
-    data: [ubyte];
-}
-
-root_type Packet;
