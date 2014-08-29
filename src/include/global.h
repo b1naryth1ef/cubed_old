@@ -30,15 +30,13 @@
 #include "rapidjson/filestream.h"
 
 // Sqlite3
-#include <sqlite3.h> 
+#include <sqlite3.h>
 
 #include "log.h"
 
-class Server;
-
 #define MULTI_LINE_STRING(a) #a
 
-static Log LOG("debug.log", true);
+static Log LOG;
 static int CUBED_VERSION = 1;
 
 static int CUBED_RELEASE_A = 0;

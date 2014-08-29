@@ -19,7 +19,6 @@ class Log {
     public:
         std::ofstream *file;
         ioutil::MultiWriter mw;
-        std::mutex mutex;
 
         Log() {
             mw.add(&std::cout);
@@ -49,7 +48,6 @@ class Log {
             strftime(timestring, sizeof(timestring) - 1, "%H:%M:%S", t);
 
             // Write it out to the optional files
-            mutex.lock();
             mw.write("[", 1);
             mw.write(tag.c_str(), strlen(tag.c_str()));
             mw.write("] ", 2);
@@ -57,13 +55,14 @@ class Log {
             mw.write(" - ", 3);
             mw.write(buffer, strlen(buffer));
             mw.write("\n", 1);
-            mutex.unlock();
 
             va_end(argptr);
         }
 
         ~Log() {
-            file->close();
+            if (file) {
+                file->close();
+            }
         }
 };
 
