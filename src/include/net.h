@@ -25,15 +25,43 @@
 
 class Packet {};
 
-#define MAXEVENTS 64
+#define MAXEVENTS 128
+
+static int openTCPSocket(std::string, short);
+
+class TCPClient {
+    public:
+        std::string host;
+        short port;
+        int fd;
+
+        TCPClient(int f, std::string h, short p) {
+            this->fd = f;
+            this->host = h;
+            this->port = abs(p);
+        }
+
+        ~TCPClient() {
+            close(this->fd);
+        }
+
+        std::string toString() {
+            char fmt[512];
+            sprintf(fmt, "TCPClient<%s, %i, %i>", this->host.c_str(), this->port, this->fd);
+            return std::string(fmt);
+        }
+};
 
 class TCPServer {
     public:
-        struct sockaddr_in serv_addr;
+        std::map<int, TCPClient*> clients;
 
-        int sockfd, efd;
-        int backlog = 64;
+        int sfd, efd;
+        int backlog = 128;
         bool active = true;
+
+        struct epoll_event event;
+        struct epoll_event *events;
 
         std::thread loop_thread;
 
@@ -42,6 +70,7 @@ class TCPServer {
 
         void stop();
         void loop();
+        void processEvent(int i);
 
         bool makeNonBlocking(int);
 };
