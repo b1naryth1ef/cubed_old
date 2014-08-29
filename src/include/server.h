@@ -22,7 +22,12 @@ class ServerConfig {
 
 class Server {
     public:
+        ushort client_id_inc = 1;
+
         std::map<std::string, World*> worlds;
+
+        std::mutex clients_mutex;
+        std::map<int, RemoteClient*> clients;
 
         std::thread main_thread;
         bool active;
@@ -58,4 +63,10 @@ class Server {
         void net_loop();
 
         bool onCVarChange(CVar *, Container *);
+
+        ushort newClientID();
+
+        bool onTCPConnectionClose(TCPClient *c);
+        bool onTCPConnectionOpen(TCPClient *c);
+        bool onTCPConnectionData(TCPClient *c);
 };

@@ -48,17 +48,18 @@ void TCPServer::stop() {
 }
 
 void TCPServer::processEvent(int i) {
+    // These are exceptinal events
     if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
         DEBUG("Connection error: %s, %u",
             this->clients[events[i].data.fd]->toString().c_str(), events[i].events);
-        delete(this->clients[events[i].data.fd]);
-        //close(events[i].data.fd);
+        this->closeRemote(events[i].data.fd);
         return;
+    // A normal socket close event
     } else if (events[i].events & EPOLLRDHUP) {
         DEBUG("Connection closed: %s", this->clients[events[i].data.fd]->toString().c_str());
-        delete(this->clients[events[i].data.fd]);
-        // close(events[i].data.fd);
+        this->closeRemote(events[i].data.fd);
         return;
+    // A socket create event
     } else if (this->sfd == events[i].data.fd) {
         while (1) {
             struct sockaddr cli_addr;
@@ -84,9 +85,16 @@ void TCPServer::processEvent(int i) {
             this->makeNonBlocking(newsockfd);
 
             TCPClient *c = new TCPClient(newsockfd, hbuf, atoi(sbuf));
-            this->clients[newsockfd] = c;
             DEBUG("Connection created: %s", c->toString().c_str());
 
+            if (this->onConnectionOpen) {
+                if (!this->onConnectionOpen(c)) {
+                    delete(c);
+                    return;
+                }
+            }
+
+            this->clients[newsockfd] = c;
             event.data.fd = newsockfd;
             event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
             if (epoll_ctl(this->efd, EPOLL_CTL_ADD, newsockfd, &event) == -1) {
@@ -112,17 +120,21 @@ void TCPServer::processEvent(int i) {
                 break;
             }
 
-            DEBUG("Input: %i, %s", count, buf);
+            DEBUG("Recievied %i bytes...", count);
+            TCPClient *c = this->clients[events[i].data.fd];
+            c->buffer.insert(c->buffer.end(), buf, buf + count);
+            if (this->onConnectionData) {
+                this->onConnectionData(c);
+            }
+
             if (done) {
                 DEBUG("Done reading from connection...");
-                delete(this->clients[events[i].data.fd]);
-                // close(events[i].data.fd);
+                this->closeRemote(events[i].data.fd);
             }
         }
     }
 }
 
-// TODO: fucking refactor
 void TCPServer::loop() {
     // Allocate events array
     events = (epoll_event *) calloc (MAXEVENTS, sizeof event);
@@ -162,4 +174,22 @@ bool TCPServer::makeNonBlocking(int sfd) {
     }
 
     return true;
+}
+
+void TCPServer::closeRemote(int rid) {
+    TCPClient *c = this->clients[rid];
+    if (this->onConnectionClose) {
+        this->onConnectionClose(c);
+    }
+
+    this->clients.erase(this->clients.find(rid));
+    delete(c);
+}
+
+void RemoteClient::tryParse() {
+    if (!c.second->buffer.size()) {
+        return;
+    }
+
+
 }

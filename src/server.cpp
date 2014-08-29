@@ -28,6 +28,12 @@ Server::Server() {
     this->dex.loadFromPath("vanilla");
 
     this->tcps = new TCPServer(this->config.host_name, this->config.host_port);
+    this->tcps->onConnectionOpen = std::bind(&Server::onTCPConnectionOpen, this,
+        std::placeholders::_1);
+    this->tcps->onConnectionClose = std::bind(&Server::onTCPConnectionClose, this,
+        std::placeholders::_1);
+    this->tcps->onConnectionData = std::bind(&Server::onTCPConnectionData, this,
+        std::placeholders::_1);
 
     // Dict test;
     // test.setString("string", "test");
@@ -73,6 +79,14 @@ void Server::main_loop() {
 }
 
 void Server::tick() {
+    this->clients_mutex.lock();
+    for (auto c : this->clients) {
+        if (c.second->packet_buffer.size()) {
+            DEBUG("Have a packet :D");
+        }
+    }
+    this->clients_mutex.unlock();
+
     for (auto w : this->worlds) {
         w.second->tick();
     }
@@ -153,3 +167,39 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
     DEBUG("onCVarChange!");
     return false;
 };
+
+bool Server::onTCPConnectionOpen(TCPClient *c) {
+    RemoteClient *rc = new RemoteClient();
+    rc->state = STATE_NEW;
+    rc->tcp = c;
+    rc->id = this->newClientID();
+    c->id = rc->id;
+
+    this->clients_mutex.lock();
+    this->clients[rc->id];
+    this->clients_mutex.unlock();
+
+    return true;
+}
+
+bool Server::onTCPConnectionClose(TCPClient *c) {
+    this->clients_mutex.lock();
+    this->clients.erase(this->clients.find(c->id));
+    this->clients_mutex.unlock();
+    delete(this->clients[c->id]);
+
+    return true;
+}
+
+bool Server::onTCPConnectionData(TCPClient *c) {
+    this->clients[c->id].tryParse();
+    return true;
+}
+
+ushort Server::newClientID() {
+    while (this->clients[client_id_inc]) {
+        client_id_inc++; 
+    }
+    
+    return client_id_inc;
+}

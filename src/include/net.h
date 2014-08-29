@@ -34,6 +34,9 @@ class TCPClient {
         std::string host;
         short port;
         int fd;
+        ushort id;
+
+        std::vector<char> buffer;
 
         TCPClient(int f, std::string h, short p) {
             this->fd = f;
@@ -52,6 +55,8 @@ class TCPClient {
         }
 };
 
+typedef std::function<bool (TCPClient *)> TCPServerHook;
+
 class TCPServer {
     public:
         std::map<int, TCPClient*> clients;
@@ -65,13 +70,36 @@ class TCPServer {
 
         std::thread loop_thread;
 
+        TCPServerHook onConnectionOpen;
+        TCPServerHook onConnectionClose;
+        TCPServerHook onConnectionData;
+
         TCPServer(std::string, short);
         ~TCPServer();
 
         void stop();
         void loop();
-        void processEvent(int i);
+        void closeRemote(int);
+        void processEvent(int);
 
         bool makeNonBlocking(int);
 };
 
+enum RemoteClientState {
+    STATE_NEW,
+    STATE_HANDSHAKE,
+    STATE_CONNECTED,
+    STATE_QUITTING,
+    STATE_DEAD
+};
+
+class RemoteClient {
+    public:
+        ushort id;
+        RemoteClientState state;
+        TCPClient *tcp;
+
+        std::vector<Packet*> packet_buffer;
+
+        void tryParse();
+};
