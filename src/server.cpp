@@ -27,6 +27,7 @@ Server::Server() {
     this->dex.db = this->db;
     this->dex.loadFromPath("vanilla");
 
+    // Create a new TCP server, which will be the main entry point for shit
     this->tcps = new TCPServer(this->config.host_name, this->config.host_port);
     this->tcps->onConnectionOpen = std::bind(&Server::onTCPConnectionOpen, this,
         std::placeholders::_1);

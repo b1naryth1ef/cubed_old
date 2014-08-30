@@ -198,4 +198,11 @@ void RemoteClient::tryParse() {
     }
 
     DEBUG("PACKET: %i, DATA-SIZE: %i", packet.pid(), packet.data().size());
+
+    int pid = packet.pid();
+    if (pid == PACKET_HELLO) {
+        if (this->state != STATE_NEW) {
+            // TODO: handshaking
+        }
+    }
 }

@@ -23,7 +23,7 @@
 #include <sys/epoll.h>
 
 enum PacketType {
-    PACKET_HELLO
+    PACKET_HELLO,
 };
 
 class Packet {};
