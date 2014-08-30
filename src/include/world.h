@@ -48,16 +48,16 @@ class Block {
         int id;
         World *world;
         BlockType *type;
-        Point *pos;
+        Point pos;
 
         Block(World *w, sqlite3_stmt *res);
 
-        Block(World *w, Point *pos) {
+        Block(World *w, Point pos) {
             this->world = w;
             this->pos = pos;
         };
 
-        Block(World *w, Point *pos, BlockType *type) {
+        Block(World *w, Point pos, BlockType *type) {
             this->world = w;
             this->pos = pos;
             this->type = type;

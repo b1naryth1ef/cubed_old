@@ -192,7 +192,7 @@ bool World::tick() {
                 Very unlikely edge case, has to be loaded AFTER we put the
                 block in the queue, but BEFORE the next world tick.
             */
-            if (this->blocks.count((* b->pos))) {
+            if (this->blocks.count(b->pos)) {
                 WARN(
                     "A block in the blockQueue was already loaded, assuming "
                     "a previous entry is more accurate and skipping."
@@ -200,7 +200,7 @@ bool World::tick() {
                 continue;
             }
 
-            this->blocks[(* b->pos)] = b;
+            this->blocks[b->pos] = b;
 
             if (incr++ > 4096) {
                 WARN("Too many blocks in queue, waiting tell next tick to load more...");
@@ -309,7 +309,7 @@ bool World::loadBlock(Point p, bool safe) {
         b = new Block(this, stmt);
     } else if (s == SQLITE_DONE) {
         DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
-        b = new Block(this, p.copy(), this->findBlockType("air"));
+        b = new Block(this, p, this->findBlockType("air"));
         b->save();
     } else {
         throw Exception("Failed to load block, query!");
@@ -458,19 +458,18 @@ Block::Block(World *w, sqlite3_stmt *res) {
         this->type = this->world->findBlockType("null");
     }
 
-    this->pos = new Point();
-    this->pos->x = sqlite3_column_int(res, 1);
-    this->pos->y = sqlite3_column_int(res, 2);
-    this->pos->z = sqlite3_column_int(res, 3);
+    this->pos.x = sqlite3_column_int(res, 1);
+    this->pos.y = sqlite3_column_int(res, 2);
+    this->pos.z = sqlite3_column_int(res, 3);
 }
 
 bool Block::save() {
     sqlite3_stmt *stmt = this->world->db->getCached("insert_block");
 
     sqlite3_bind_int(stmt, 1, this->type->id);
-    sqlite3_bind_double(stmt, 2, this->pos->x);
-    sqlite3_bind_double(stmt, 3, this->pos->y);
-    sqlite3_bind_double(stmt, 4, this->pos->z);
+    sqlite3_bind_double(stmt, 2, this->pos.x);
+    sqlite3_bind_double(stmt, 3, this->pos.y);
+    sqlite3_bind_double(stmt, 4, this->pos.z);
 
     int s = sqlite3_step(stmt);
 

@@ -8,14 +8,11 @@ class Point {
     public:
         double x, y, z;
 
+        Point() {};
         Point(double x, double y, double z);
         Point(int x, int y, int z);
         Point(const rapidjson::Value &v);
-        Point() {};
-
-        Point *copy() {
-            return new Point(x, y, z);
-        }
+        Point(const Point&);
 
         std::string debug() {
             char x[512];

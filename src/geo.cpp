@@ -19,3 +19,10 @@ Point::Point(const rapidjson::Value &v) {
     y = v[rapidjson::SizeType(1)].GetInt();
     z = v[rapidjson::SizeType(2)].GetInt();
 }
+
+
+Point::Point(const Point& p) {
+    this->x = p.x;
+    this->y = p.y;
+    this->z = p.z;
+}
