@@ -8,6 +8,7 @@ void load_default_block_types(World *w, BlockTypeIndexT *bti) {
     w->addBlockType(null_bt);
 
     BlockType *air_bt = new BlockType("air", false);
+    air_bt->persists = false;
     w->addBlockType(air_bt);
 }
 
@@ -15,8 +16,25 @@ void load_default_block_types(World *w, BlockTypeIndexT *bti) {
 BlockType::BlockType(sqlite3_stmt *res) {
     this->id = sqlite3_column_int(res, 0);
     this->type = (char *)sqlite3_column_text(res, 1);
-    this->owner = (char *)sqlite3_column_text(res, 2);
-    this->active = sqlite3_column_int(res, 3);
+    this->active = sqlite3_column_int(res, 2);
+
+    cubedworld::BlockTypeExtra bte;
+
+    char *data = (char *) sqlite3_column_blob(res, 3);
+
+    if (sqlite3_column_bytes(res, 3) <= 0) {
+        DEBUG("No extra data to read!");
+        return;
+    }
+
+    bool ok = bte.ParseFromArray(data, sqlite3_column_bytes(res, 3));
+
+    if (!ok) {
+        ERROR("Failed to load extra BlockType data from sql!");
+    }
+
+    this->owner = bte.owner();
+    this->persists = bte.persists();
 }
 
 // Creates a new WorldFile from a directory path
@@ -100,7 +118,7 @@ bool WorldFile::open() {
         "VALUES (?, ?, ?, ?);");
 
     this->db->addCached("insert_blocktype",
-        "INSERT INTO blocktypes (type, owner, active)"
+        "INSERT INTO blocktypes (type, active, extra)"
         "VALUES (?, ?, ?);");
 
     this->db->addCached("find_block_pos",
@@ -116,8 +134,8 @@ bool WorldFile::setupDatabase() {
     err = sqlite3_exec(db->db, "CREATE TABLE blocktypes ("
         "id INTEGER PRIMARY KEY ASC,"
         "type TEXT,"
-        "owner TEXT,"
-        "active INTEGER"
+        "active INTEGER,"
+        "extra BLOB"
     ");", 0, 0, 0);
 
     err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
@@ -242,6 +260,12 @@ World::~World() {
 }
 
 bool World::close() {
+    for (auto b : this->blocks) {
+        if (b.second->dirty) {
+            b.second->save();
+        }
+    }
+
     this->wf->close();
     return true;
 }
@@ -350,6 +374,7 @@ BlockType *World::findBlockType(std::string s) {
     return nullptr;
 }
 
+// TODO: move the blocktype saving into the blocktype class plz
 bool World::addBlockType(BlockType *bt) {
     if (this->findBlockType(bt->type) != nullptr) {
         DEBUG("Cannot addBlockType on `%s`, already exists in index.", bt->type.c_str());
@@ -364,8 +389,15 @@ bool World::addBlockType(BlockType *bt) {
     sqlite3_stmt *stmt = this->db->getCached("insert_blocktype");
 
     sqlite3_bind_text(stmt, 1, bt->type.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, "test", -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 3, 1);
+    sqlite3_bind_int(stmt, 2, 1);
+
+    // Save extra data
+    std::string data;
+    cubedworld::BlockTypeExtra bte;
+    bte.set_persists(bt->persists);
+    bte.set_owner(bt->owner);
+    bte.SerializeToString(&data);
+    sqlite3_bind_blob(stmt, 3, data.c_str(), data.size(), NULL);
 
     int s = sqlite3_step(stmt);
     int id = sqlite3_last_insert_rowid(this->db->db);
@@ -464,6 +496,16 @@ Block::Block(World *w, sqlite3_stmt *res) {
 }
 
 bool Block::save() {
+    // Hitting this point means we've already (kind of) saved the block
+    this->dirty = false;
+
+    // Break out if this block doesnt persist in the world-store.
+    if (!this->type->persists) {
+        DEBUG("Block type %s does not persist, not saving block!",
+            this->type->type.c_str());
+        return false;
+    }
+
     sqlite3_stmt *stmt = this->world->db->getCached("insert_block");
 
     sqlite3_bind_int(stmt, 1, this->type->id);

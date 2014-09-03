@@ -1,0 +1,6 @@
+package cubedworld;
+
+message BlockTypeExtra {
+    required bool persists = 1;
+    required string owner = 2;
+}

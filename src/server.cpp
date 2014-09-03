@@ -174,8 +174,7 @@ bool Server::onTCPConnectionOpen(TCPClient *c) {
     RemoteClient *rc = new RemoteClient();
     rc->state = STATE_NEW;
     rc->tcp = c;
-    rc->id = this->newClientID();
-    c->id = rc->id;
+    rc->id = c->id = this->newClientID();
 
     this->clients_mutex.lock();
     this->clients[rc->id] = rc;

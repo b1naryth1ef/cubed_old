@@ -5,6 +5,7 @@
 #include "util.h"
 #include "geo.h"
 #include "entity.h"
+#include "gen/world.pb.h"
 
 using namespace rapidjson;
 
@@ -25,10 +26,12 @@ class BlockType {
         int id;
 
         std::string type;
-        std::string owner;
-
         bool active;
         bool is_custom;
+
+        // Extra Data
+        std::string owner;
+        bool persists = true;
 
         BlockType(std::string type_name, bool is_custom) {
             this->type = type_name;
@@ -49,6 +52,7 @@ class Block {
         World *world;
         BlockType *type;
         Point pos;
+        bool dirty = false;
 
         Block(World *w, sqlite3_stmt *res);
 
@@ -64,6 +68,11 @@ class Block {
         }
 
         bool save();
+
+        // Mark a block to be saved at SOME point
+        void mark() {
+            this->dirty = true;
+        }
 };
 
 typedef std::vector<Block*> BlockV;
