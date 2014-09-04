@@ -15,11 +15,11 @@ Server::Server() {
         this->setupDatabase();
     }
 
-    this->sv_tickrate->setInt(this->config.tickrate);
-    this->sv_name->setString(this->config.name);
+    this->sv_tickrate->set(this->config.tickrate);
+    this->sv_name->set(this->config.name);
 
     for (auto world_name : this->config.worlds) {
-        World *w = new World(world_name);
+        ServerWorld *w = new ServerWorld(world_name);
         w->load();
         this->addWorld(w);
     }
@@ -80,13 +80,17 @@ void Server::main_loop() {
 }
 
 void Server::tick() {
-    // this->clients_mutex.lock();
-    // for (auto c : this->clients) {
-    //     if (c.second->packet_buffer.size()) {
-    //         DEBUG("Have a packet :D");
-    //     }
-    // }
-    // this->clients_mutex.unlock();
+    this->clients_mutex.lock();
+    for (auto c : this->clients) {
+        if (c.second->packet_buffer.size()) {
+            DEBUG("Parsing one packet...");
+            cubednet::Packet *p = c.second->packet_buffer.front();
+            c.second->packet_buffer.pop();
+            this->handlePacket(p, c.second);
+            delete(p);
+        }
+    }
+    this->clients_mutex.unlock();
 
     for (auto w : this->worlds) {
         w.second->tick();
@@ -110,12 +114,12 @@ void Server::loadCvars() {
     sv_tickrate->rmvFlag(FLAG_USER_WRITE)->rmvFlag(FLAG_MOD_WRITE);
 
     sv_version = cvars->create("sv_version", "The servers version");
-    sv_version->setInt(CUBED_VERSION);
+    sv_version->set(CUBED_VERSION);
     sv_version->rmvFlag(FLAG_USER_WRITE)->rmvFlag(FLAG_MOD_WRITE);
 
 }
 
-void Server::addWorld(World *w) {
+void Server::addWorld(ServerWorld *w) {
     this->worlds[w->wf->name] = w;
 }
 
@@ -169,7 +173,7 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
     return false;
 };
 
-bool Server::onTCPConnectionOpen(TCPClient *c) {
+bool Server::onTCPConnectionOpen(TCPRemoteClient *c) {
     DEBUG("Adding TCPClient...");
     RemoteClient *rc = new RemoteClient();
     rc->state = STATE_NEW;
@@ -183,17 +187,17 @@ bool Server::onTCPConnectionOpen(TCPClient *c) {
     return true;
 }
 
-bool Server::onTCPConnectionClose(TCPClient *c) {
+bool Server::onTCPConnectionClose(TCPRemoteClient *c) {
     DEBUG("Removing TCPClient...");
     this->clients_mutex.lock();
-    this->clients.erase(this->clients.find(c->id));
-    this->clients_mutex.unlock();
     delete(this->clients[c->id]);
+    this->clients.erase(c->id);
+    this->clients_mutex.unlock();
 
     return true;
 }
 
-bool Server::onTCPConnectionData(TCPClient *c) {
+bool Server::onTCPConnectionData(TCPRemoteClient *c) {
     DEBUG("Running tryparse on client %i", c->id);
     this->clients[c->id]->tryParse();
     return true;
@@ -205,4 +209,31 @@ ushort Server::newClientID() {
     }
     
     return client_id_inc;
+}
+
+void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
+    switch (pk->pid()) {
+        case PACKET_HELLO: {
+            DEBUG("Handling packet hello");
+            cubednet::PacketHello pkh;
+            assert(pkh.ParseFromString(pk->data()));
+
+            DEBUG("Client has version %i, we have %i!", pkh.version(), CUBED_VERSION);
+            if (pkh.version() != CUBED_VERSION) {
+                c->disconnect(2, "Invalid Cubed Version!");
+                return;
+            }
+
+            if (c->state != STATE_NEW) {
+                c->disconnect(1, "Generic Protocol Error.");
+                return;
+            }
+
+            c->state = STATE_HANDSHAKE;
+            DEBUG("Would send handshake...");
+            // TODO: send back handshaking packet
+            break;
+        }
+    }
+
 }

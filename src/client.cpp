@@ -19,12 +19,23 @@ void Client::connect(std::string addr) {
     }
 
     DEBUG("Client has host `%s` and port `%d`", this->remote_host.c_str(), this->remote_port);
+    this->tcpcli.conn(this->remote_host, this->remote_port);
 }
 
 void Client::run() {
-
+    this->active = true;
+    this->connect("127.0.0.1:6060");
+    this->main_loop();
 }
 
 void Client::main_loop() {
-    
+    Ticker t = Ticker(32);
+
+    while (this->active) {
+        if (!t.next()) {
+            WARN("RUNNING SLOW!");
+        }
+
+        // this->tick();
+    }
 }

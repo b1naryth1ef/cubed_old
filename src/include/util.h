@@ -113,19 +113,19 @@ class Container {
     public:
         CStorageType type;
 
-        Container *setInt(int i) {
+        Container *set(int i) {
             this->type = STORAGE_INT;
             this->value.i = i;
             return this;
         }
 
-        Container *setDouble(double d) {
+        Container *set(double d) {
             this->type = STORAGE_DOUBLE;
             this->value.d = d;
             return this;
         }
 
-        Container *setString(std::string s) {
+        Container *set(std::string s) {
             this->type = STORAGE_STRING;
             this->s = s;
             return this;
@@ -168,7 +168,7 @@ class Dict {
 
         Container *setInt(std::string k, int v) {
             Container *c = new Container();
-            c->setInt(v);
+            c->set(v);
             data[k] = c;
             return c;
         };
@@ -179,7 +179,7 @@ class Dict {
 
         Container *setDouble(std::string k, double v) {
             Container *c = new Container();
-            c->setDouble(v);
+            c->set(v);
             data[k] = c;
             return c;
         }
@@ -190,32 +190,34 @@ class Dict {
 
         Container *setString(std::string k, std::string v) {
             Container *c = new Container();
-            c->setString(v);
+            c->set(v);
             data[k] = c;
             return c;
         }
 
         Document *toJSON() {
-            Document result;
-            result.SetObject();
+            Document *result = new Document;
+            result->SetObject();
             
             for (auto &kv : this->data) {
-                Value k(kv.first.c_str(), result.GetAllocator());
+                Value k(kv.first.c_str(), result->GetAllocator());
 
                 if (kv.second->type == STORAGE_INT) {
                     Value v(kv.second->getInt());
-                    result.AddMember(k, v, result.GetAllocator());
+                    result->AddMember(k, v, result->GetAllocator());
                 } else if (kv.second->type == STORAGE_STRING) {
-                    Value v(kv.second->getString().c_str(), result.GetAllocator());
-                    result.AddMember(k, v, result.GetAllocator());
+                    Value v(kv.second->getString().c_str(), result->GetAllocator());
+                    result->AddMember(k, v, result->GetAllocator());
                 } else if (kv.second->type == STORAGE_DOUBLE) {
                     Value v(kv.second->getDouble());
-                    result.AddMember(k, v, result.GetAllocator());
+                    result->AddMember(k, v, result->GetAllocator());
                 }
             }
 
-            return &result;
+            return result;
         }
 
-        bool fromJSON(Document *d) {}
+        bool fromJSON(Document *d) {
+            return false;
+        }
 };

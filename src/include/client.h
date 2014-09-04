@@ -15,8 +15,10 @@ class Client {
         std::string remote_host;
         short remote_port;
 
-        // Represents all blocks in-memory, air blocks must exist in this
-        BlockCacheT blocks;
+        // TODO: Eventaully we may support multiple worlds loaded at once on the client?
+        ClientWorld *world;
+
+        TCPClient tcpcli;
 
         Client() {
             tick_rate = 64;

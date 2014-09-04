@@ -66,13 +66,13 @@ class CVar: public Container {
             Container *c = new Container();
             switch (this->type) {
                 case STORAGE_INT:
-                    c->setInt(this->getInt());
+                    c->set(this->getInt());
                     break;
                 case STORAGE_DOUBLE:
-                    c->setDouble(this->getDouble());
+                    c->set(this->getDouble());
                     break;
                 case STORAGE_STRING:
-                    c->setString(this->getString());
+                    c->set(this->getString());
                     break;
             }
             return c;
@@ -81,13 +81,13 @@ class CVar: public Container {
         void fromContainer(Container *c) {
             switch (c->type) {
                 case STORAGE_INT:
-                    this->setInt(c->getInt());
+                    this->set(c->getInt());
                     break;
                 case STORAGE_DOUBLE:
-                    this->setDouble(c->getDouble());
+                    this->set(c->getDouble());
                     break;
                 case STORAGE_STRING:
-                    this->setString(c->getString());
+                    this->set(c->getString());
                     break;
             }
         }
@@ -110,6 +110,7 @@ class CVarDict {
             }
 
             cvar->fromContainer(newc);
+            return true;
         }
 
         void bind(CVarOnChange f) {

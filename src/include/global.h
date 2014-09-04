@@ -37,11 +37,12 @@
 #define MULTI_LINE_STRING(a) #a
 
 static Log LOG;
-static int CUBED_VERSION = 1;
 
 static int CUBED_RELEASE_A = 0;
 static int CUBED_RELEASE_B = 0;
-static int CUBED_RELEASE_C = 2;
+static int CUBED_RELEASE_C = 4;
+
+static int CUBED_VERSION = CUBED_RELEASE_C >> CUBED_RELEASE_B >> CUBED_RELEASE_A; 
 
 #define DEBUG(x, ...)  LOG.L("DEBUG", x, ## __VA_ARGS__)
 #define WARN(x, ...)   LOG.L("WARN ", x, ## __VA_ARGS__)

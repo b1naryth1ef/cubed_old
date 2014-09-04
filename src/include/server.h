@@ -24,7 +24,7 @@ class Server {
     public:
         ushort client_id_inc = 1;
 
-        std::map<std::string, World*> worlds;
+        std::map<std::string, ServerWorld*> worlds;
 
         std::mutex clients_mutex;
         std::map<int, RemoteClient*> clients;
@@ -45,7 +45,7 @@ class Server {
         CVar *sv_tickrate;
         CVar *sv_version;
 
-        void addWorld(World *);
+        void addWorld(ServerWorld *);
 
         void loadCvars();
 
@@ -66,7 +66,9 @@ class Server {
 
         ushort newClientID();
 
-        bool onTCPConnectionClose(TCPClient *c);
-        bool onTCPConnectionOpen(TCPClient *c);
-        bool onTCPConnectionData(TCPClient *c);
+        bool onTCPConnectionClose(TCPRemoteClient *c);
+        bool onTCPConnectionOpen(TCPRemoteClient *c);
+        bool onTCPConnectionData(TCPRemoteClient *c);
+
+        void handlePacket(cubednet::Packet *pk, RemoteClient *c);
 };

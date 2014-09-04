@@ -24,6 +24,7 @@
 
 enum PacketType {
     PACKET_HELLO,
+    PACKET_DC,
 };
 
 class Packet {};
@@ -32,22 +33,22 @@ class Packet {};
 
 static int openTCPSocket(std::string, short);
 
-class TCPClient {
+class TCPRemoteClient {
     public:
         std::string host;
-        short port;
-        int fd;
+        ushort port;
         ushort id;
+        int fd;
 
         std::vector<char> buffer;
 
-        TCPClient(int f, std::string h, short p) {
+        TCPRemoteClient(int f, std::string h, short p) {
             this->fd = f;
             this->host = h;
             this->port = abs(p);
         }
 
-        ~TCPClient() {
+        ~TCPRemoteClient() {
             close(this->fd);
         }
 
@@ -56,13 +57,15 @@ class TCPClient {
             sprintf(fmt, "TCPClient<%s, %i, %i>", this->host.c_str(), this->port, this->fd);
             return std::string(fmt);
         }
+
+        void send_packet(int id, google::protobuf::Message *data);
 };
 
-typedef std::function<bool (TCPClient *)> TCPServerHook;
+typedef std::function<bool (TCPRemoteClient *)> TCPServerHook;
 
 class TCPServer {
     public:
-        std::map<int, TCPClient*> clients;
+        std::map<int, TCPRemoteClient*> clients;
 
         int sfd, efd;
         int backlog = 128;
@@ -88,6 +91,24 @@ class TCPServer {
         bool makeNonBlocking(int);
 };
 
+class TCPClient {
+    public:
+        ~TCPClient();
+
+        std::string remote_host;
+        ushort remote_port;
+        int fd;
+        bool active = true;
+
+        std::thread read_loop_thread;
+
+        std::vector<char> buffer;
+
+        bool conn(std::string, ushort);
+        void read_loop();
+        void send_packet(int, google::protobuf::Message*);
+};
+
 enum RemoteClientState {
     STATE_NEW,
     STATE_HANDSHAKE,
@@ -100,9 +121,10 @@ class RemoteClient {
     public:
         ushort id;
         RemoteClientState state;
-        TCPClient *tcp;
+        TCPRemoteClient *tcp;
 
-        std::vector<Packet*> packet_buffer;
+        std::queue<cubednet::Packet*> packet_buffer;
 
         void tryParse();
+        void disconnect(int, const std::string);
 };

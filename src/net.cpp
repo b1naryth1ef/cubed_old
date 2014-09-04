@@ -76,7 +76,7 @@ void TCPServer::processEvent(int i) {
             }
 
             char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-            int s = getnameinfo(&cli_addr, cli_addr_len,
+            getnameinfo(&cli_addr, cli_addr_len,
                        hbuf, sizeof hbuf,
                        sbuf, sizeof sbuf,
                        NI_NUMERICHOST | NI_NUMERICSERV);
@@ -84,7 +84,7 @@ void TCPServer::processEvent(int i) {
             
             this->makeNonBlocking(newsockfd);
 
-            TCPClient *c = new TCPClient(newsockfd, hbuf, atoi(sbuf));
+            TCPRemoteClient *c = new TCPRemoteClient(newsockfd, hbuf, atoi(sbuf));
             DEBUG("Connection created: %s", c->toString().c_str());
 
             if (this->onConnectionOpen) {
@@ -121,7 +121,7 @@ void TCPServer::processEvent(int i) {
             }
 
             DEBUG("Recievied %i bytes...", count);
-            TCPClient *c = this->clients[events[i].data.fd];
+            TCPRemoteClient *c = this->clients[events[i].data.fd];
             c->buffer.insert(c->buffer.end(), buf, buf + count);
             if (this->onConnectionData) {
                 this->onConnectionData(c);
@@ -177,7 +177,7 @@ bool TCPServer::makeNonBlocking(int sfd) {
 }
 
 void TCPServer::closeRemote(int rid) {
-    TCPClient *c = this->clients[rid];
+    TCPRemoteClient *c = this->clients[rid];
     if (this->onConnectionClose) {
         this->onConnectionClose(c);
     }
@@ -191,18 +191,111 @@ void RemoteClient::tryParse() {
         return;
     }
 
-    cubednet::Packet packet;
-    if (!packet.ParseFromArray(&this->tcp->buffer[0], this->tcp->buffer.size())) {
+    // GC: This is cleaned up in the server parsing loop
+    cubednet::Packet *packet = new cubednet::Packet;
+    if (!packet->ParseFromArray(&this->tcp->buffer[0], this->tcp->buffer.size())) {
         WARN("Failed to parse data, assuming we need more...");
         return;
     }
 
-    DEBUG("PACKET: %i, DATA-SIZE: %i", packet.pid(), packet.data().size());
+    DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
+    this->packet_buffer.push(packet);
 
-    int pid = packet.pid();
-    if (pid == PACKET_HELLO) {
-        if (this->state != STATE_NEW) {
-            // TODO: handshaking
-        }
+    // int pid = packet.pid();
+    // if (pid == PACKET_HELLO) {
+    //     cubednet::PacketHello pkhel;
+    //     assert(pkhel.ParseFromString(packet.data()));
+    //     this->server->parsePacketHello(pkhel, this);
+    // }
+}
+
+bool TCPClient::conn(std::string host, ushort port) {
+    this->remote_host = host;
+    this->remote_port = port;
+
+    struct sockaddr_in servaddr;
+    this->fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr(this->remote_host.c_str());
+    servaddr.sin_port = htons(this->remote_port);
+
+    int i = connect(this->fd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    DEBUG("Connect result %i", i);
+
+    if (i == -1) {
+        ERROR("Failed to connect...");
+        return false;
     }
+
+    this->read_loop_thread = std::thread(&TCPClient::read_loop, this);
+
+    // Send Hello
+    cubednet::PacketHello pkh;
+    pkh.set_username("test");
+    pkh.set_hashcode("0");
+    pkh.set_version(CUBED_VERSION);
+    this->send_packet(PACKET_HELLO, &pkh);
+
+    return true;
+}
+
+void TCPClient::read_loop() {
+    char buffer[1024];
+    int n;
+
+    while (this->active) {
+        n = recvfrom(this->fd, buffer, sizeof buffer, 0, NULL, NULL);
+        if (n == 0) {
+            WARN("Remote server disconnected...");
+            this->active = false;
+            break;
+        }
+
+        this->buffer.insert(this->buffer.end(), buffer, buffer + n);
+        DEBUG("Recieved %i bytes...", n);
+    }
+}
+
+void TCPClient::send_packet(int id, google::protobuf::Message *data) {
+    std::string buffa, buffb;
+    cubednet::Packet pk;
+
+    data->SerializeToString(&buffa);
+
+    pk.set_pid(id);
+    pk.set_data(buffa);
+    pk.SerializeToString(&buffb);
+
+    write(this->fd, buffb.c_str(), buffb.size());
+}
+
+TCPClient::~TCPClient() {
+    this->active = false;
+    alarm(1);
+    this->read_loop_thread.join();
+    close(this->fd);
+}
+
+void RemoteClient::disconnect(int r, const std::string d) {
+    DEBUG("Disconnecting remote client for reason %i, decs: %s",
+        r, d.c_str());
+    cubednet::PacketDisconnect dc;
+    dc.set_reason(r);
+    dc.set_desc(d);
+    this->tcp->send_packet(PACKET_DC, &dc);
+}
+
+void TCPRemoteClient::send_packet(int id, google::protobuf::Message *data) {
+    std::string buffa, buffb;
+    cubednet::Packet pk;
+
+    data->SerializeToString(&buffa);
+
+    pk.set_pid(id);
+    pk.set_data(buffa);
+    pk.SerializeToString(&buffb);
+
+    write(this->fd, buffb.c_str(), buffb.size());
 }

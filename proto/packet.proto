@@ -18,3 +18,8 @@ message PacketHello {
 
     repeated ModDef mods = 4;
 }
+
+message PacketDisconnect {
+    required uint32 reason = 1;
+    required string desc = 2;
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys, time, fnmatch, shutil
+import os, sys, time, fnmatch
 
 # Linked libraries
 LIBRARIES = [
@@ -53,7 +53,6 @@ def gen_build_command():
 def build():
     start = time.time()
     i = os.system(get_protobuf_command())
-    print gen_build_command()
     i = i or os.system(gen_build_command())
 
     return not bool(i), (time.time() - start)

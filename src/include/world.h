@@ -67,8 +67,6 @@ class Block {
             this->type = type;
         }
 
-        bool save();
-
         // Mark a block to be saved at SOME point
         void mark() {
             this->dirty = true;
@@ -100,11 +98,21 @@ typedef std::unordered_map<Point, Block*, pointHashFunc, pointEqualsFunc> BlockC
 
 class World {
     public:
-        WorldFile *wf;
-
         BlockTypeIndexT *type_index;
         BlockCacheT blocks;
         std::vector<Entity *> entities;
+
+        // Finds a block type by string, returns nullptr on no match or more than one match
+        BlockType *findBlockType(std::string s);
+
+        // Gets a block at point P from cache or returns null
+        Block *getBlock(Point);
+
+};
+
+class ServerWorld: public World {
+    public:
+        WorldFile *wf;
         DB *db;
 
         // This is a queue of async loaded blocks that need to be added
@@ -112,9 +120,9 @@ class World {
         std::queue<Block *> blockQueue;
         std::mutex blockQueueLock;
 
-        World(WorldFile *wf);
-        World(std::string path);
-        ~World();
+        ServerWorld(WorldFile *wf);
+        ServerWorld(std::string path);
+        ~ServerWorld();
 
         bool load();
         bool close();
@@ -131,21 +139,19 @@ class World {
         // Attempts to load a single block
         bool loadBlock(Point, bool safe = false);
 
-        // Gets a block at point P from cache or returns null
-        Block *getBlock(Point);
-
         // Gets a block at point P from cache or loads it and returns
         Block *getBlockForced(Point);
 
         // Commits the blocktypeindex to the db
         bool addBlockType(BlockType *bt);
 
-        // Finds a block type by string, returns nullptr on no match or more than one match
-        BlockType *findBlockType(std::string s);
-
         bool loadBlockTypeIndex();
+
+        bool saveBlock(Block *b);
+
 };
 
+class ClientWorld: public World {};
 
 class Generator {
     public:

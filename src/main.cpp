@@ -32,7 +32,16 @@ void run_server() {
     }
 }
 
-void run_client() {}
+void run_client() {
+    bind_signals();
+
+    c = new Client();
+    c->run();
+
+    while (c->active) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+}
 
 int main(int argc, const char* argv[]) {
     if (argc > 1) {
