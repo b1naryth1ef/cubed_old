@@ -9,7 +9,7 @@ LIBRARIES = [
     "dl",
     "protobuf",
     "pthread",
-    "nacl"
+    "sodium"
 ]
 
 # Included directories or files
@@ -89,10 +89,22 @@ def setup_liblua():
     os.chdir(start)
     os.system("rm -rf lua-5.2.3 lua-5.2.3.tar.gz")
 
+def setup_libsodium():
+    start = os.getcwd()
+    os.system("git clone https://github.com/jedisct1/libsodium.git")
+    os.chdir("libsodium")
+    os.system("./autogen.sh")
+    os.system("./configure")
+    os.system("make -j8")
+    os.system("sudo make install")
+    os.chdir(start)
+    os.system("rm -rf libsodium")
+
 def setup():
     setup_liblua()
     setup_rapidjson()
-    setup_flatbuffers()
+    # setup_flatbuffers()
+    setup_libsodium()
 
 if __name__ == "__main__":
     if len(sys.argv) <= 1:

@@ -6,3 +6,5 @@
 src/include/gen/
 *.db
 cubed
+*.key
+keys/

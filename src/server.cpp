@@ -8,6 +8,13 @@ Server::Server() {
     // Load the SQLite3 Module stuff TODO: move/rename?
     init_db_module();
 
+    // Load the servers keypairs
+    if (this->keypair.empty) {
+        INFO("Generating new server keypair");
+        this->keypair.generate();
+        this->keypair.save("keys");
+    }
+
     // Load the server cvars
     this->loadCvars();
     this->config.load();

@@ -7,6 +7,7 @@
 #include "cvar.h"
 #include "mod.h"
 #include "db.h"
+#include "crypto.h"
 
 class ServerConfig {
     public:
@@ -33,6 +34,7 @@ class Server {
         bool active;
 
         TCPServer *tcps;
+        KeyPair keypair = KeyPair("keys");
 
         ModDex dex;
         CVarDict *cvars;
