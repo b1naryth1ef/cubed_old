@@ -8,7 +8,8 @@ LIBRARIES = [
     "lua",
     "dl",
     "protobuf",
-    "pthread"
+    "pthread",
+    "nacl"
 ]
 
 # Included directories or files
