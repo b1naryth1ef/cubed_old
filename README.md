@@ -62,10 +62,9 @@ The world DB holds three major tables relating to the world
 The server represents a base class that handles the runtime environment of a server. It handles loaded worlds, modules, and everything else in between. Servers operate at a constant tickrate that can be set at startup, and have a single primary loop which updates everything in the server (which operates at said tickrate).
 
 # B1nz todos
-- Figure out the encryption protocol, authentication protocol, etc. Curve?
+- Implement the encryption protocol, authentication protocol, etc.
 - Write a complete installation/building guide
-- Write client side networking and gl context shit
-- Do some lifecycle management and get a hold on some memory leaks
+- Write client gl context shit
 - Implement loading cvars from JSON files.
 - Design the "extra-data" system for blocks/entities/etc. What format? etc.
 - Start working on plugin implementation
