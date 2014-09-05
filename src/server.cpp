@@ -1,7 +1,9 @@
 #include "server.h"
 
 Server::Server() {
-    DEBUG("Cubed v%i.%i.%i", CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C);
+    INFO("Cubed Server v%i.%i.%i (%i, git: %s)",
+        CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C, CUBED_VERSION,
+        CUBED_GIT_HASH);
 
     // Load the SQLite3 Module stuff TODO: move/rename?
     init_db_module();
@@ -214,7 +216,6 @@ ushort Server::newClientID() {
 void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
     switch (pk->pid()) {
         case PACKET_HELLO: {
-            DEBUG("Handling packet hello");
             cubednet::PacketHello pkh;
             assert(pkh.ParseFromString(pk->data()));
 

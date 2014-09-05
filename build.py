@@ -51,6 +51,9 @@ def gen_build_command():
     return " ".join(base)
 
 def build():
+    ghash = os.popen("git rev-parse --verify HEAD").read().strip()
+    FLAGS.append('CUBED_GIT_HASH=\\"%s\\"' % ghash)
+
     start = time.time()
     i = os.system(get_protobuf_command())
     i = i or os.system(gen_build_command())

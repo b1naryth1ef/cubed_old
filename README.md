@@ -23,6 +23,24 @@ Read the source, understand the format, fork, edit, PR, profit. Eventually we wi
 
 ## Infrastructure
 
+### Networking
+Almost all network packets, sans handshakes should be encrypted using curve-based encryption, with public and private keys. Ideally, cubed does *not* rely on a specific login server, but instead allows multiple login servers to be used. Login servers should either support generating public/private keys for users, or allow for uploading them. Login servers only contain a username and public-key (along with a signed payload of the username w/ the users keypair).
+
+#### Authentication
+
+1. Client sends PacketHello to server, this is UNENCRYPTED and SIGNED payload which contains some generic information, and this clients public-key/username pair along with the current session ID from the login server.
+2. Server contacts the login server with the public-key, username, and session ID. If the session server validates this information, the server sends back a PacketStart which is now ENCRYPTED and nounced! All further packets must be fully encrypted (signing is assumed from the encryption). If the login server denies the validty of the users content, the server will immediatly send a PacketDisconnect with the valid error-code and message.
+
+#### Packets
+
+- `PacketHello`, sent from the client to the server for handshaking
+- `PacketDisconnect`, bidirectional, signals the immediate end of this networking stream/session
+- `PacketStart`, sent from server to client, start of nounce's, world/server info
+- `PacketBlocks`, sent from server to client, contains positionally tagged blocks
+- `PacketBlockRegion`, sent from the server to client, contains polygonal information and blocks in the polygon
+- `PacketBlockUpdate`, sent from server to client, specifies an individual block change
+
+
 ### Worlds
 A world in cubed is represented by a folder containing two items. The first is a world-definition file specifying a few basics about the world, like the world name and version. The second is a sqlite database containing all the data required for the world to be loaded. Worlds can be loaded at anytime, either during startup or while the cubed server is running. World's allow both sync and async block loading from disk allowing for fairly good performance on loading large chunks from the world, although there are still areas that need improvment. On disk, around 2 million blocks equates to 60 or so MB, and that takes about 50 seconds to load async.
 

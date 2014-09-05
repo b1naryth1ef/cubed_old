@@ -200,13 +200,6 @@ void RemoteClient::tryParse() {
 
     DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
     this->packet_buffer.push(packet);
-
-    // int pid = packet.pid();
-    // if (pid == PACKET_HELLO) {
-    //     cubednet::PacketHello pkhel;
-    //     assert(pkhel.ParseFromString(packet.data()));
-    //     this->server->parsePacketHello(pkhel, this);
-    // }
 }
 
 bool TCPClient::conn(std::string host, ushort port) {

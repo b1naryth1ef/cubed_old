@@ -1,8 +1,8 @@
 #include "world.h"
 
 // Loads the default null and air block types into a BlockTypeIndex
-void load_default_block_types(World *w, BlockTypeIndexT *bti) {
-    DEBUG("Loading default block types...");
+void load_default_block_types(ServerWorld *w, BlockTypeIndexT *bti) {
+    INFO("Loading default block types");
 
     BlockType *null_bt = new BlockType("null", false);
     w->addBlockType(null_bt);
@@ -49,7 +49,7 @@ WorldFile::~WorldFile() {
 
 // Attempts to open a WorldFile
 bool WorldFile::open() {
-    DEBUG("Attempting to open worldfile...");
+    INFO("Loading worldfile");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
 
@@ -108,7 +108,7 @@ bool WorldFile::open() {
 
     // If this is a new db, create the tables
     if (this->db->is_new) {
-        DEBUG("Creating database for first time...");
+        INFO("Creating world database for first time");
         this->setupDatabase();
     }
 
@@ -177,20 +177,20 @@ bool WorldFile::close() {
 }
 
 // Create a new World from a WorldFile
-World::World(WorldFile *wf) {
+ServerWorld::ServerWorld(WorldFile *wf) {
     this->wf = wf;
     this->db = wf->db;
 }
 
 // Load a new World and WorldFile from a path
-World::World(std::string path) {
+ServerWorld::ServerWorld(std::string path) {
     this->wf = new WorldFile(path);
     this->wf->open();
     this->db = this->wf->db;
 }
 
 // Update the world for this tick
-bool World::tick() {
+bool ServerWorld::tick() {
     for (auto &e : this->entities) {
         if (e->keepWorldLoadedAround()) {
             // TOOD: generate the region of blocks we need to keep loaded
@@ -201,7 +201,7 @@ bool World::tick() {
     this->blockQueueLock.lock();
     if (this->blockQueue.size()) {
         int incr = 0;
-        DEBUG("Have %i queued blocks...", this->blockQueue.size());
+        // DEBUG("Have %i queued blocks...", this->blockQueue.size());
         while (this->blockQueue.size()) {
             Block *b = this->blockQueue.front();
             this->blockQueue.pop();
@@ -231,7 +231,7 @@ bool World::tick() {
     return true;
 }
 
-bool World::load() {
+bool ServerWorld::load() {
     int amount = 64;
     DEBUG("Loading world...");
 
@@ -255,14 +255,14 @@ bool World::load() {
     return true;
 }
 
-World::~World() {
+ServerWorld::~ServerWorld() {
     this->close();
 }
 
-bool World::close() {
+bool ServerWorld::close() {
     for (auto b : this->blocks) {
         if (b.second->dirty) {
-            b.second->save();
+            this->saveBlock(b.second);
         }
     }
 
@@ -278,7 +278,7 @@ bool World::close() {
     a conflict, beware of this!). If cleanup is true, the function will
     cleanup the Point vector after it's finished.
 */
-bool World::loadBlocksAsync(PointV *points, bool cleanup) {
+bool ServerWorld::loadBlocksAsync(PointV *points, bool cleanup) {
     THREAD([this, points, cleanup](){
         Timer t = Timer();
         t.start();
@@ -297,7 +297,7 @@ bool World::loadBlocksAsync(PointV *points, bool cleanup) {
     return true;
 }
 
-bool World::loadBlocks(PointV points) {
+bool ServerWorld::loadBlocks(PointV points) {
     for (auto i : points) {
         this->loadBlock(i);
     }
@@ -315,7 +315,7 @@ bool World::loadBlocks(PointV points) {
     is true, and the world loads the same block at Point P BEFORE the next
     tick is called, the block loaded within this call will be ignored.
 */
-bool World::loadBlock(Point p, bool safe) {
+bool ServerWorld::loadBlock(Point p, bool safe) {
     // If the block already exists, skip this
     if (blocks.count(p)) {
         return false;
@@ -334,7 +334,7 @@ bool World::loadBlock(Point p, bool safe) {
     } else if (s == SQLITE_DONE) {
         DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
         b = new Block(this, p, this->findBlockType("air"));
-        b->save();
+        this->saveBlock(b);
     } else {
         throw Exception("Failed to load block, query!");
     }
@@ -375,7 +375,7 @@ BlockType *World::findBlockType(std::string s) {
 }
 
 // TODO: move the blocktype saving into the blocktype class plz
-bool World::addBlockType(BlockType *bt) {
+bool ServerWorld::addBlockType(BlockType *bt) {
     if (this->findBlockType(bt->type) != nullptr) {
         DEBUG("Cannot addBlockType on `%s`, already exists in index.", bt->type.c_str());
         return false;
@@ -417,7 +417,7 @@ bool World::addBlockType(BlockType *bt) {
     return true;
 }
 
-bool World::loadBlockTypeIndex() {
+bool ServerWorld::loadBlockTypeIndex() {
     DEBUG("Loading block types from index");
     sqlite3_stmt *stmt;
     const char *ztail;
@@ -470,7 +470,7 @@ Block *World::getBlock(Point p)  {
     Same as `World::getBlock` except it will attempt to load the block
     from the db/create an empty air block if the block is not in the cache.
 */
-Block *World::getBlockForced(Point p) {
+Block *ServerWorld::getBlockForced(Point p) {
     if (blocks.count(p) != 1) {
         this->loadBlock(p);
     }
@@ -495,23 +495,24 @@ Block::Block(World *w, sqlite3_stmt *res) {
     this->pos.z = sqlite3_column_int(res, 3);
 }
 
-bool Block::save() {
+
+bool ServerWorld::saveBlock(Block *b) {
     // Hitting this point means we've already (kind of) saved the block
-    this->dirty = false;
+    b->dirty = false;
 
     // Break out if this block doesnt persist in the world-store.
-    if (!this->type->persists) {
+    if (!b->type->persists) {
         DEBUG("Block type %s does not persist, not saving block!",
-            this->type->type.c_str());
+            b->type->type.c_str());
         return false;
     }
 
-    sqlite3_stmt *stmt = this->world->db->getCached("insert_block");
+    sqlite3_stmt *stmt = this->db->getCached("insert_block");
 
-    sqlite3_bind_int(stmt, 1, this->type->id);
-    sqlite3_bind_double(stmt, 2, this->pos.x);
-    sqlite3_bind_double(stmt, 3, this->pos.y);
-    sqlite3_bind_double(stmt, 4, this->pos.z);
+    sqlite3_bind_int(stmt, 1, b->type->id);
+    sqlite3_bind_double(stmt, 2, b->pos.x);
+    sqlite3_bind_double(stmt, 3, b->pos.y);
+    sqlite3_bind_double(stmt, 4, b->pos.z);
 
     int s = sqlite3_step(stmt);
 

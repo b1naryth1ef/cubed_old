@@ -4,3 +4,9 @@ message BlockTypeExtra {
     required bool persists = 1;
     required string owner = 2;
 }
+
+message Point {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+}
