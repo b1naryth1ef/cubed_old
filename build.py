@@ -10,7 +10,8 @@ LIBRARIES = [
     "protobuf",
     "pthread",
     "sodium",
-    "SDL2"
+    "SDL2",
+    "GL"
 ]
 
 # Included directories or files

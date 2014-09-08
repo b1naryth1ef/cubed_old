@@ -27,13 +27,13 @@ class Client {
         };
 
         ~Client() {
-            SDL_Quit();
-            delete(this->main_window);
+            this->shutdown();
         }
 
         bool setup();
         void run();
         void main_loop();
+        void shutdown();
 
         void connect(std::string);
 };

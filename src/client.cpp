@@ -31,12 +31,19 @@ void Client::run() {
 void Client::main_loop() {
     Ticker t = Ticker(32);
 
+    SDL_Event e;
+
     while (this->active) {
         if (!t.next()) {
             WARN("RUNNING SLOW!");
         }
 
-        // this->tick();
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                DEBUG("Got SDL_QUIT...");
+                this->active = false;
+            }
+        }
     }
 }
 
@@ -46,5 +53,23 @@ bool Client::setup() {
         return false;
     }
 
+    // Request OpenGL 3.2
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
+    // Double buffering??
+    // SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    // SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+
     this->main_window = new Window("Cubed", 460, 460);
+}
+
+void Client::shutdown() {
+    DEBUG("Joining %i thread-pool threads", THREAD_POOL.size());
+    for (auto &t : THREAD_POOL) {
+        t->join();
+    }
+
+    SDL_Quit();
+    delete(this->main_window);
 }
