@@ -39,3 +39,12 @@ void Client::main_loop() {
         // this->tick();
     }
 }
+
+bool Client::setup() {
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        ERROR("Failed to setup SDL!");
+        return false;
+    }
+
+    this->main_window = new Window("Cubed", 460, 460);
+}

@@ -5,5 +5,8 @@
         "port": 6060
     },
     "worlds": ["testworld"],
-    "tickrate": 64
+    "tickrate": 64,
+    "logins": [
+        "hackle.hydr0.com"
+    ]
 }

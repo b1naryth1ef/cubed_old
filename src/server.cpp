@@ -15,8 +15,6 @@ Server::Server() {
         this->keypair.save("keys");
     }
 
-    DEBUG("TEST: %s", this->keypair.sign("hello?").c_str());
-
     // Load the server cvars
     this->loadCvars();
     this->config.load();
@@ -175,6 +173,10 @@ void ServerConfig::load() {
         this->worlds.push_back(itr->GetString());
     }
 
+    const Value& logins = d["logins"];
+    for (Value::ConstValueIterator itr = logins.Begin(); itr != logins.End(); ++itr) {
+        this->login_servers.push_back(itr->GetString());
+    }
 
     fclose(fp);
 }

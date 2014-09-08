@@ -36,6 +36,7 @@ void run_client() {
     bind_signals();
 
     c = new Client();
+    c->setup();
     c->run();
 
     while (c->active) {

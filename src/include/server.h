@@ -20,6 +20,8 @@ class ServerConfig {
         std::vector<std::string> worlds;
         short tickrate;
 
+        std::vector<std::string> login_servers;
+
         void load();
 };
 

@@ -4,6 +4,7 @@
 #include "world.h"
 #include "net.h"
 #include "util.h"
+#include "renderer.h"
 
 class Client {
     public:
@@ -15,16 +16,22 @@ class Client {
         std::string remote_host;
         short remote_port;
 
-        // TODO: Eventaully we may support multiple worlds loaded at once on the client?
         ClientWorld *world;
-
         TCPClient tcpcli;
+
+        Window *main_window;
 
         Client() {
             tick_rate = 64;
             fps_rate = 120;
         };
 
+        ~Client() {
+            SDL_Quit();
+            delete(this->main_window);
+        }
+
+        bool setup();
         void run();
         void main_loop();
 
