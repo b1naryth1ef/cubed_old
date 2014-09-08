@@ -9,6 +9,8 @@
 #include "db.h"
 #include "crypto.h"
 
+#define STATUS_JUNK_DATA_SIZE 256
+
 class ServerConfig {
     public:
         std::string name;
@@ -46,6 +48,7 @@ class Server {
         CVar *sv_name;
         CVar *sv_tickrate;
         CVar *sv_version;
+        CVar *sv_motd;
 
         void addWorld(ServerWorld *);
 
@@ -73,4 +76,6 @@ class Server {
         bool onTCPConnectionData(TCPRemoteClient *c);
 
         void handlePacket(cubednet::Packet *pk, RemoteClient *c);
+        void handlePacketHello(cubednet::PacketHello pk, RemoteClient *c);
+        void handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c);
 };

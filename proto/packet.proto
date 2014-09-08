@@ -11,6 +11,23 @@ message ModDef {
     required bool enabled = 3;
 }
 
+// Client -> Server
+message PacketStatusRequest {
+    required bytes data = 1;
+    required int64 a1 = 2;
+    required int64 a2 = 3;
+}
+
+// Server -> Client
+message PacketStatusResponse {
+    required string name = 1;
+    required string motd = 2;
+    required uint32 players = 3;
+    required uint32 version = 4;
+    required bytes pubkey = 5;
+    required bytes data = 6;
+}
+
 message PacketHello {
     required string username = 1;
     required string hashcode = 2;

@@ -33,6 +33,7 @@ Almost all network packets, sans handshakes should be encrypted using curve-base
 
 #### Packets
 
+- `PacketStatus`, sent from the client to the server for general server listing
 - `PacketHello`, sent from the client to the server for handshaking
 - `PacketDisconnect`, bidirectional, signals the immediate end of this networking stream/session
 - `PacketStart`, sent from server to client, start of nounce's, world/server info

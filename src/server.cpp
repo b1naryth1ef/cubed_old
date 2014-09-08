@@ -15,6 +15,8 @@ Server::Server() {
         this->keypair.save("keys");
     }
 
+    DEBUG("TEST: %s", this->keypair.sign("hello?").c_str());
+
     // Load the server cvars
     this->loadCvars();
     this->config.load();
@@ -225,23 +227,56 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
         case PACKET_HELLO: {
             cubednet::PacketHello pkh;
             assert(pkh.ParseFromString(pk->data()));
-
-            DEBUG("Client has version %i, we have %i!", pkh.version(), CUBED_VERSION);
-            if (pkh.version() != CUBED_VERSION) {
-                c->disconnect(2, "Invalid Cubed Version!");
-                return;
-            }
-
-            if (c->state != STATE_NEW) {
-                c->disconnect(1, "Generic Protocol Error.");
-                return;
-            }
-
-            c->state = STATE_HANDSHAKE;
-            DEBUG("Would send handshake...");
-            // TODO: send back handshaking packet
+            this->handlePacketHello(pkh, c);
+            break;
+        }
+        case PACKET_STATUS_REQUEST: {
+            cubednet::PacketStatusRequest pkh;
+            assert(pkh.ParseFromString(pk->data()));
+            this->handlePacketStatusRequest(pkh, c);
             break;
         }
     }
 
+}
+
+void Server::handlePacketHello(cubednet::PacketHello pk, RemoteClient *c) {
+    DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
+    if (pk.version() != CUBED_VERSION) {
+        c->disconnect(2, "Invalid Cubed Version!");
+        return;
+    }
+
+    if (c->state != STATE_NEW) {
+        c->disconnect(1, "Generic Protocol Error.");
+        return;
+    }
+
+    c->state = STATE_HANDSHAKE;
+    DEBUG("Would send handshake...");
+    // TODO: send back handshaking packet
+}
+
+void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c) {
+    // Make sure the junk data is the right size. This is used to prevent
+    //  spam/dos attacks against the server by ensuring the request packet
+    //  is always larger than the servers response.
+    if (pk.data().size() < STATUS_JUNK_DATA_SIZE) {
+        c->terminate();
+    }
+
+    cubednet::PacketStatusResponse res;
+    res.set_name(this->sv_name->getString());
+    res.set_motd(this->sv_motd->getString());
+    res.set_players(this->clients.size());
+    res.set_version(this->sv_version->getInt());
+
+    // Set the public key
+    res.set_pubkey(this->keypair.getPublicKey());
+
+    char buffer[1024];
+    sprintf(buffer, "%Ld|%Ld|%i", pk.a1(), pk.a2(), 0);
+    res.set_data(this->keypair.sign(buffer));
+
+    c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
 }

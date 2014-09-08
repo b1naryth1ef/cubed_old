@@ -2,27 +2,21 @@
 
 #include "global.h"
 
-// #include "flatbuffers/flatbuffers.h"
-
 // generated Files
 #include "gen/packet.pb.h"
 
-// TODO: cut down
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
+// Networking specific headers
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
-#include <signal.h>
 #include <sys/epoll.h>
 
 enum PacketType {
+    PACKET_STATUS_REQUEST,
+    PACKET_STATUS_RESPONSE,
     PACKET_HELLO,
     PACKET_DC,
 };
@@ -56,6 +50,10 @@ class TCPRemoteClient {
             char fmt[512];
             sprintf(fmt, "TCPClient<%s, %i, %i>", this->host.c_str(), this->port, this->fd);
             return std::string(fmt);
+        }
+
+        void disconnect() {
+            close(this->fd);
         }
 
         void send_packet(int id, google::protobuf::Message *data);
@@ -127,4 +125,5 @@ class RemoteClient {
 
         void tryParse();
         void disconnect(int, const std::string);
+        void terminate();
 };

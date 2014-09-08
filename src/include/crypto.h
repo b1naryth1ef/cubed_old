@@ -13,6 +13,24 @@ class KeyPair {
     public:
         bool empty = true;
 
+        std::string getPublicKey() {
+            return std::string(reinterpret_cast<const char*>(this->pubkey));
+        }
+
+        // TODO: add support for detached mode
+        std::string sign(std::string data) {
+            long long unsigned int buffer_size = crypto_sign_BYTES + (long long) data.size();
+            unsigned char buffer[buffer_size];
+
+            assert(crypto_sign(
+                buffer, &buffer_size,
+                (const unsigned char *) data.c_str(), data.size(),
+                this->privkey
+            ) == 0);
+
+            return std::string(reinterpret_cast<const char*>(buffer));
+        }
+
         KeyPair(std::string dir) {
             if (!ioutil::file_exists(dir)) {
                 return;

@@ -278,6 +278,12 @@ void RemoteClient::disconnect(int r, const std::string d) {
     dc.set_reason(r);
     dc.set_desc(d);
     this->tcp->send_packet(PACKET_DC, &dc);
+    this->tcp->disconnect();
+}
+
+void RemoteClient::terminate() {
+    DEBUG("Terminating connection to remote client");
+    this->tcp->disconnect();
 }
 
 void TCPRemoteClient::send_packet(int id, google::protobuf::Message *data) {
