@@ -70,6 +70,15 @@ class Block {
         void mark() {
             this->dirty = true;
         }
+
+        Point getChunkPos() {
+            return Point(
+                this->pos.x / 16,
+                this->pos.y / 16,
+                this->pos.z / 16);
+        }
+
+
 };
 
 typedef std::vector<Block*> BlockV;
@@ -119,6 +128,12 @@ class Chunk {
 
         // TODO: builds visible, complex, etc
         void calculate();
+
+        Chunk(Point p) {
+            this->pos = p;
+        }
+
+        void addBlock(Block *b);
 };
 
 
@@ -172,8 +187,6 @@ class ServerWorld: public World {
         // Commits the blocktypeindex to the db
         bool addBlockType(BlockType *bt);
 
-        bool loadBlockTypeIndex();
-
         bool saveBlock(Block *b);
 
 };
@@ -181,6 +194,10 @@ class ServerWorld: public World {
 class ClientWorld: public World {
     public:
         ChunkCacheT chunks;
+
+        Chunk *getChunk(int, int, int, bool create=false);
+        Chunk *getChunk(Point p, bool create=false);
+        bool storeBlock(Block *b);
 };
 
 class Generator {

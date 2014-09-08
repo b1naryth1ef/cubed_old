@@ -395,43 +395,6 @@ bool ServerWorld::addBlockType(BlockType *bt) {
     return true;
 }
 
-bool ServerWorld::loadBlockTypeIndex() {
-    // DEBUG("Loading block types from index");
-    // sqlite3_stmt *stmt;
-    // const char *ztail;
-    // int s;
-
-    // int err = sqlite3_prepare_v2(db->db, "SELECT * FROM blocktypes ORDER BY id", 100, &stmt, &ztail);
-
-    // if (err != SQLITE_OK) {
-    //     throw Exception("Failed to load block type index, initial query!");
-    // }
-
-    // while (1) {
-    //     s = sqlite3_step(stmt);
-
-    //     if (s == SQLITE_ROW) {
-    //         BlockType *bt = new BlockType(stmt);
-
-    //         if (this->findBlockType(bt->type) != nullptr) {
-    //             WARN("Blocktype with name `%s` is already in index w/ id %i, skipping...",
-    //                 bt->type.c_str(), bt->id);
-    //             continue;
-    //         }
-
-    //         (*this->type_index)[bt->id] = bt;
-    //         DEBUG("Loaded blocktype %i / %s from index", bt->id, bt->type.c_str());
-    //     } else if (s == SQLITE_DONE) {
-    //         break;
-    //     } else {
-    //         throw Exception("Failed to load block type index, query-parse!");
-    //     }
-    // }
-
-    // sqlite3_finalize(stmt);
-    // return true;
-}
-
 /*
     Returns a block at Point p from the loaded block cache, if the block
     is not loaded or not in the cache, it will return NULL instead.
@@ -503,4 +466,32 @@ bool ServerWorld::saveBlock(Block *b) {
     sqlite3_reset(stmt);
 
     return true;
+}
+
+
+Chunk *ClientWorld::getChunk(int x, int y, int z, bool create) {
+    return this->getChunk(Point(x, y, z), create);
+
+}
+
+Chunk *ClientWorld::getChunk(Point p, bool create) {
+    if (this->chunks.count(p) != 1) {
+        if (create) {
+            this->chunks[p] = new Chunk(p);
+        } else {
+            return nullptr;
+        }
+    }
+
+    return this->chunks.find(p)->second;
+}
+
+bool ClientWorld::storeBlock(Block *b) {
+    Chunk *c = this->getChunk(b->getChunkPos(), true);
+    c->addBlock(b);
+}
+
+void Chunk::addBlock(Block *b) {
+    // TODO bounds/error?
+    this->blocks[b->pos] = b;
 }

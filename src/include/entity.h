@@ -2,10 +2,12 @@
 
 #include "global.h"
 #include "geo.h"
+#include "util.h"
 
 class Entity {
     public:
         Point *pos;
+        Dict *custom;
 
         // The number of blocks around this entity to keep loaded, 0 is none
         virtual int keepWorldLoadedAround() { return 0; };

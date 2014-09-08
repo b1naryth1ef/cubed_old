@@ -5,7 +5,7 @@
 const char *ztail;
 
 DB::DB(std::string path) {
-    DEBUG("Opening SQLite table %s", path.c_str());
+    DEBUG("Opening SQLite database %s", path.c_str());
 
     this->is_new = !ioutil::file_exists(path);
 
