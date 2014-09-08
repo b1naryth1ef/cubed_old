@@ -2,8 +2,6 @@
 
 #include "renderer.h"
 
-
-
 Window::Window(std::string title, int height, int width) {
     this->win = SDL_CreateWindow(title.c_str(),
         0, 0, height, width, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);

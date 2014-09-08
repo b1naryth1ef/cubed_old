@@ -20,6 +20,7 @@ class BlockType;
 class Block;
 class WorldFile;
 class World;
+class Chunk;
 
 class BlockType {
     public:
@@ -29,16 +30,14 @@ class BlockType {
         bool active;
         bool is_custom;
 
-        // Extra Data
         std::string owner;
         bool persists = true;
+        bool transparent = false;
 
         BlockType(std::string type_name, bool is_custom) {
             this->type = type_name;
             this->is_custom = is_custom;
         };
-
-        BlockType(sqlite3_stmt *res);
 };
 
 
@@ -95,18 +94,41 @@ class WorldFile {
 };
 
 typedef std::unordered_map<Point, Block*, pointHashFunc, pointEqualsFunc> BlockCacheT;
+typedef std::unordered_map<Point, Chunk*, pointHashFunc, pointEqualsFunc> ChunkCacheT;
+
+class Chunk {
+    public:
+        Point pos;
+
+        // True if this chunk needs to be recalculated BEFORE the next render
+        bool dirty = true;
+
+        // False if ALL sides are covered by non-transparent blocks
+        bool visible = true;
+
+        // True if there are ANY complex-type blocks in this chunk (transparent, etc)
+        bool complex = false;
+
+        BlockCacheT blocks;
+
+        // Represents a list of 
+        std::vector<Point> to_render;
+
+        // TODO: will generate a cached texture for each side
+        void generateTexture();
+
+        // TODO: builds visible, complex, etc
+        void calculate();
+};
+
 
 class World {
     public:
         BlockTypeIndexT *type_index;
-        BlockCacheT blocks;
         std::vector<Entity *> entities;
 
         // Finds a block type by string, returns nullptr on no match or more than one match
         BlockType *findBlockType(std::string s);
-
-        // Gets a block at point P from cache or returns null
-        Block *getBlock(Point);
 
 };
 
@@ -114,6 +136,8 @@ class ServerWorld: public World {
     public:
         WorldFile *wf;
         DB *db;
+
+        BlockCacheT blocks;
 
         // This is a queue of async loaded blocks that need to be added
         //  on the main loop.
@@ -142,6 +166,9 @@ class ServerWorld: public World {
         // Gets a block at point P from cache or loads it and returns
         Block *getBlockForced(Point);
 
+        // Gets a block at point P from cache or returns null
+        Block *getBlock(Point);
+
         // Commits the blocktypeindex to the db
         bool addBlockType(BlockType *bt);
 
@@ -151,7 +178,10 @@ class ServerWorld: public World {
 
 };
 
-class ClientWorld: public World {};
+class ClientWorld: public World {
+    public:
+        ChunkCacheT chunks;
+};
 
 class Generator {
     public:

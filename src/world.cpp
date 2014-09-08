@@ -8,34 +8,10 @@ void load_default_block_types(ServerWorld *w, BlockTypeIndexT *bti) {
     w->addBlockType(null_bt);
 
     BlockType *air_bt = new BlockType("air", false);
-    air_bt->persists = false;
+    // air_bt->persists = false;
     w->addBlockType(air_bt);
 }
 
-// Creates a new block type from a blocktype SQLite row
-BlockType::BlockType(sqlite3_stmt *res) {
-    this->id = sqlite3_column_int(res, 0);
-    this->type = (char *)sqlite3_column_text(res, 1);
-    this->active = sqlite3_column_int(res, 2);
-
-    cubedworld::BlockTypeExtra bte;
-
-    char *data = (char *) sqlite3_column_blob(res, 3);
-
-    if (sqlite3_column_bytes(res, 3) <= 0) {
-        DEBUG("No extra data to read!");
-        return;
-    }
-
-    bool ok = bte.ParseFromArray(data, sqlite3_column_bytes(res, 3));
-
-    if (!ok) {
-        ERROR("Failed to load extra BlockType data from sql!");
-    }
-
-    this->owner = bte.owner();
-    this->persists = bte.persists();
-}
 
 // Creates a new WorldFile from a directory path
 WorldFile::WorldFile(std::string dir) {
@@ -118,11 +94,14 @@ bool WorldFile::open() {
         "VALUES (?, ?, ?, ?);");
 
     this->db->addCached("insert_blocktype",
-        "INSERT INTO blocktypes (type, active, extra)"
-        "VALUES (?, ?, ?);");
+        "INSERT INTO blocktypes (type, active)"
+        "VALUES (?, ?);");
 
     this->db->addCached("find_block_pos",
         "SELECT * FROM blocks WHERE x=? AND y=? AND z=?");
+
+    this->db->addCached("find_blocktype_type",
+        "SELECT * FROM blocktypes WHERE type=?");
 
     return true;
 }
@@ -134,8 +113,7 @@ bool WorldFile::setupDatabase() {
     err = sqlite3_exec(db->db, "CREATE TABLE blocktypes ("
         "id INTEGER PRIMARY KEY ASC,"
         "type TEXT,"
-        "active INTEGER,"
-        "extra BLOB"
+        "active INTEGER"
     ");", 0, 0, 0);
 
     err = sqlite3_exec(db->db, "CREATE TABLE blocks ("
@@ -236,7 +214,6 @@ bool ServerWorld::load() {
     DEBUG("Loading world...");
 
     this->type_index = new BlockTypeIndexT();
-    this->loadBlockTypeIndex();
     load_default_block_types(this, this->type_index);
 
     // Allocate a new Point vector, this is deleted in loadBlocksAsync
@@ -332,7 +309,7 @@ bool ServerWorld::loadBlock(Point p, bool safe) {
     if (s == SQLITE_ROW) {
         b = new Block(this, stmt);
     } else if (s == SQLITE_DONE) {
-        DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
+        // DEBUG("No block exists for %F, %F, %F! Assuming air block.", p.x, p.y, p.z);
         b = new Block(this, p, this->findBlockType("air"));
         this->saveBlock(b);
     } else {
@@ -381,84 +358,85 @@ bool ServerWorld::addBlockType(BlockType *bt) {
         return false;
     }
 
-    // Add to type_index
-    (*this->type_index)[bt->id] = bt;
-
-    this->db->begin();
-
-    sqlite3_stmt *stmt = this->db->getCached("insert_blocktype");
-
+    sqlite3_stmt *stmt = this->db->getCached("find_blocktype_type");
     sqlite3_bind_text(stmt, 1, bt->type.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_int(stmt, 2, 1);
-
-    // Save extra data
-    std::string data;
-    cubedworld::BlockTypeExtra bte;
-    bte.set_persists(bt->persists);
-    bte.set_owner(bt->owner);
-    bte.SerializeToString(&data);
-    sqlite3_bind_blob(stmt, 3, data.c_str(), data.size(), NULL);
 
     int s = sqlite3_step(stmt);
-    int id = sqlite3_last_insert_rowid(this->db->db);
+    assert(s != SQLITE_ERROR);
 
-    if (s != SQLITE_DONE) {
-        ERROR("Failed to save blocktype!");
-        throw Exception("Failed to save blocktype!");
+    // If this blocktype exists in the db, just extract the ID
+    if (s == SQLITE_ROW) {
+        bt->id = sqlite3_column_int(stmt, 1);
+    } else if (s == SQLITE_DONE) {
+        this->db->begin();
+
+        sqlite3_stmt *stmt2 = this->db->getCached("insert_blocktype");
+        sqlite3_bind_text(stmt2, 1, bt->type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt2, 2, 1);
+        int res = sqlite3_step(stmt2);
+        int id = sqlite3_last_insert_rowid(this->db->db);
+
+        if (s != SQLITE_DONE) {
+            ERROR("Failed to insert blocktype!");
+            throw Exception("Failed to insert blocktype!");
+        }
+
+        sqlite3_clear_bindings(stmt2);
+        sqlite3_reset(stmt2);
+
+        bt->id = id;
+        this->db->end();
     }
 
+    (*this->type_index)[bt->id] = bt;
     sqlite3_clear_bindings(stmt);
     sqlite3_reset(stmt);
-
-    this->db->end();
-
-    bt->id = id;
 
     return true;
 }
 
 bool ServerWorld::loadBlockTypeIndex() {
-    DEBUG("Loading block types from index");
-    sqlite3_stmt *stmt;
-    const char *ztail;
-    int s;
+    // DEBUG("Loading block types from index");
+    // sqlite3_stmt *stmt;
+    // const char *ztail;
+    // int s;
 
-    int err = sqlite3_prepare_v2(db->db, "SELECT * FROM blocktypes ORDER BY id", 100, &stmt, &ztail);
+    // int err = sqlite3_prepare_v2(db->db, "SELECT * FROM blocktypes ORDER BY id", 100, &stmt, &ztail);
 
-    if (err != SQLITE_OK) {
-        throw Exception("Failed to load block type index, initial query!");
-    }
+    // if (err != SQLITE_OK) {
+    //     throw Exception("Failed to load block type index, initial query!");
+    // }
 
-    while (1) {
-        s = sqlite3_step(stmt);
+    // while (1) {
+    //     s = sqlite3_step(stmt);
 
-        if (s == SQLITE_ROW) {
-            BlockType *bt = new BlockType(stmt);
+    //     if (s == SQLITE_ROW) {
+    //         BlockType *bt = new BlockType(stmt);
 
-            if (this->findBlockType(bt->type) != nullptr) {
-                WARN("Blocktype with name `%s` is already in index w/ id %i, skipping...",
-                    bt->type.c_str(), bt->id);
-                continue;
-            }
+    //         if (this->findBlockType(bt->type) != nullptr) {
+    //             WARN("Blocktype with name `%s` is already in index w/ id %i, skipping...",
+    //                 bt->type.c_str(), bt->id);
+    //             continue;
+    //         }
 
-            (*this->type_index)[bt->id] = bt;
-            DEBUG("Loaded blocktype %i / %s from index", bt->id, bt->type.c_str());
-        } else if (s == SQLITE_DONE) {
-            break;
-        } else {
-            throw Exception("Failed to load block type index, query-parse!");
-        }
-    }
+    //         (*this->type_index)[bt->id] = bt;
+    //         DEBUG("Loaded blocktype %i / %s from index", bt->id, bt->type.c_str());
+    //     } else if (s == SQLITE_DONE) {
+    //         break;
+    //     } else {
+    //         throw Exception("Failed to load block type index, query-parse!");
+    //     }
+    // }
 
-    sqlite3_finalize(stmt);
-    return true;
+    // sqlite3_finalize(stmt);
+    // return true;
 }
 
 /*
     Returns a block at Point p from the loaded block cache, if the block
     is not loaded or not in the cache, it will return NULL instead.
 */
-Block *World::getBlock(Point p)  {
+Block *ServerWorld::getBlock(Point p)  {
     if (blocks.count(p) != 1) {
         return NULL;
     }
