@@ -67,7 +67,6 @@ The server represents a base class that handles the runtime environment of a ser
 # B1nz todos
 - Implement the encryption protocol, authentication protocol, etc.
 - Write a complete installation/building guide
-- Write client gl context shit
 - Implement loading cvars from JSON files.
 - Design the "extra-data" system for blocks/entities/etc. What format? etc.
 - Start working on plugin implementation

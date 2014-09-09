@@ -8,7 +8,7 @@
 #include "mod.h"
 #include "db.h"
 #include "crypto.h"
-#include "http.h"
+#include "loginserver.h"
 
 #define STATUS_JUNK_DATA_SIZE 256
 
@@ -37,6 +37,9 @@ class Server {
         // A mapping of connected clients
         std::mutex clients_mutex;
         std::map<ushort, RemoteClient*> clients;
+
+        // List of all our login servers
+        std::vector<LoginServer*> login_servers;
 
         // The main thread
         std::thread main_thread;

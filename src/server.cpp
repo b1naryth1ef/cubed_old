@@ -19,8 +19,14 @@ Server::Server() {
     this->loadCvars();
     this->config.load();
 
-    for (auto &ls : this->config.login_servers) {
-        this->verifyLoginServer(ls);
+    // Load and validate the login servers
+    INFO("Loading all login servers...");
+    if (!this->config.login_servers.size()) {
+        WARN("No login servers provided, login disabled!");
+    } else {
+        for (auto &ls : this->config.login_servers) {
+            this->login_servers.push_back(new LoginServer(ls));
+        }
     }
 
     this->db = new DB("server.db");
@@ -49,10 +55,6 @@ Server::Server() {
     this->tcps->onConnectionData = std::bind(&Server::onTCPConnectionData, this,
         std::placeholders::_1);
 
-    // Dict test;
-    // test.setString("string", "test");
-    // test.setInt("int", 1);
-    // test.setDouble("double", 1.342342);
 }
 
 Server::~Server() {
@@ -62,6 +64,10 @@ Server::~Server() {
 void Server::shutdown() {
     for (auto v : this->worlds) {
         v.second->close();
+    }
+
+    for (auto v : this->login_servers) {
+        delete(v);
     }
 
     DEBUG("Joining %i thread-pool threads", THREAD_POOL.size());
@@ -294,23 +300,4 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
     res.set_data(this->keypair.sign(buffer));
 
     c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
-}
-
-bool Server::verifyLoginServer(std::string &x) {
-    HTTPClient cli;
-
-    char buffer[x.size() + 10];
-    sprintf(buffer, "%s/api/info", x.c_str());
-    HTTPResponse r = cli.request(
-        HTTPRequest(buffer)
-    );
-
-    if (r.code != 200) {
-        ERROR("Failed to verify login server %s (%Li)", x.c_str(), r.code);
-        return false;
-    } else {
-        DEBUG("Verified login server %s", x.c_str());
-    }
-
-    return true;
 }
