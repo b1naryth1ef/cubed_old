@@ -20,14 +20,21 @@ Server::Server() {
     this->config.load();
 
     // Load and validate the login servers
-    INFO("Loading all login servers...");
-    if (!this->config.login_servers.size()) {
-        WARN("No login servers provided, login disabled!");
-    } else {
+    THREAD([this]() {
+        INFO("Loading all login servers...");
+
         for (auto &ls : this->config.login_servers) {
-            this->login_servers.push_back(new LoginServer(ls));
+            LoginServer *serv = new LoginServer(ls);
+            if (serv->valid) {
+                this->login_servers.push_back(serv);
+            }
         }
-    }
+
+        if (!this->login_servers.size()) {
+            WARN("No login servers provided, authentication/sessions are disabled!");
+        }
+    });
+
 
     this->db = new DB("server.db");
     if (this->db->is_new) {
