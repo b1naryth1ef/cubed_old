@@ -8,6 +8,7 @@
 #include "mod.h"
 #include "db.h"
 #include "crypto.h"
+#include "http.h"
 
 #define STATUS_JUNK_DATA_SIZE 256
 
@@ -27,22 +28,38 @@ class ServerConfig {
 
 class Server {
     public:
+        // This represents the global client ID counter
         ushort client_id_inc = 1;
 
+        // This holds all the worlds loaded by the server
         std::map<std::string, ServerWorld*> worlds;
 
+        // A mapping of connected clients
         std::mutex clients_mutex;
-        std::map<int, RemoteClient*> clients;
+        std::map<ushort, RemoteClient*> clients;
 
+        // The main thread
         std::thread main_thread;
+
+        // Whether the server is active
         bool active;
 
+        // The TCP server
         TCPServer *tcps;
+
+        // The servers keypair
         KeyPair keypair = KeyPair("keys");
 
+        // The mod index
         ModDex dex;
+
+        // The servers cvar dictionary
         CVarDict *cvars;
+
+        // The servers config
         ServerConfig config;
+
+        // The servers database file
         DB *db;
 
         // Server cvar handles
@@ -52,31 +69,44 @@ class Server {
         CVar *sv_version;
         CVar *sv_motd;
 
-        void addWorld(ServerWorld *);
-
-        void loadCvars();
-
-        void setupDatabase();
-
         Server();
         ~Server();
 
+        // Adds a world to the server
+        void addWorld(ServerWorld *);
+
+        // Loads cvars, should be called early (startup)
+        void loadCvars();
+
+        // Loads the server-database
+        void loadDatabase();
+
+        // Shuts the server down
         void shutdown();
 
-        void serve_forever();
+        // Runs the server (this is blocking)
+        void serveForever();
+
+        // Fires a server tick, should be run by the main loop
         void tick();
 
-        void main_loop();
-        void net_loop();
+        // The main server loop
+        void mainLoop();
 
+        // Fired when CVarDict (this.cvars) has a change
         bool onCVarChange(CVar *, Container *);
 
+        // Generates a new client-id
         ushort newClientID();
 
+        bool verifyLoginServer(std::string&);
+
+        // Hooks for the TCP-server
         bool onTCPConnectionClose(TCPRemoteClient *c);
         bool onTCPConnectionOpen(TCPRemoteClient *c);
         bool onTCPConnectionData(TCPRemoteClient *c);
 
+        // Hooks for packets
         void handlePacket(cubednet::Packet *pk, RemoteClient *c);
         void handlePacketHello(cubednet::PacketHello pk, RemoteClient *c);
         void handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c);

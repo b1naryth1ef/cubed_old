@@ -25,7 +25,7 @@ void run_server() {
     bind_signals();
 
     s = new Server();
-    s->serve_forever();
+    s->serveForever();
 
     while (s->active || c->active) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));

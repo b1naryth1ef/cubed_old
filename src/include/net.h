@@ -36,10 +36,10 @@ class TCPRemoteClient {
 
         std::vector<char> buffer;
 
-        TCPRemoteClient(int f, std::string h, short p) {
+        TCPRemoteClient(int f, std::string h, ushort p) {
             this->fd = f;
             this->host = h;
-            this->port = abs(p);
+            this->port = p;
         }
 
         ~TCPRemoteClient() {

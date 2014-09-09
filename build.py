@@ -11,7 +11,8 @@ LIBRARIES = [
     "pthread",
     "sodium",
     "SDL2",
-    "GL"
+    "GL",
+    "curl"
 ]
 
 # Included directories or files
@@ -71,16 +72,6 @@ def setup_rapidjson():
     os.system("sudo cp -rf rapidjson/include/rapidjson /usr/include/rapidjson")
     os.system("rm -rf rapidjson")
 
-def setup_flatbuffers():
-    start = os.getcwd()
-    os.system("git clone https://github.com/google/flatbuffers.git")
-    os.chdir("flatbuffers/build/")
-    os.system("cmake ..")
-    os.system("make -j8")
-    os.system("sudo make install")
-    os.chdir(start)
-    os.system("rm -rf flatbuffers")
-
 def setup_liblua():
     start = os.getcwd()
     os.system("wget http://www.lua.org/ftp/lua-5.2.3.tar.gz")
@@ -105,7 +96,6 @@ def setup_libsodium():
 def setup():
     setup_liblua()
     setup_rapidjson()
-    # setup_flatbuffers()
     setup_libsodium()
 
 if __name__ == "__main__":

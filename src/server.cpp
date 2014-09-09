@@ -19,9 +19,13 @@ Server::Server() {
     this->loadCvars();
     this->config.load();
 
+    for (auto &ls : this->config.login_servers) {
+        this->verifyLoginServer(ls);
+    }
+
     this->db = new DB("server.db");
     if (this->db->is_new) {
-        this->setupDatabase();
+        this->loadDatabase();
     }
 
     this->sv_tickrate->set(this->config.tickrate);
@@ -66,9 +70,9 @@ void Server::shutdown() {
     }
 }
 
-void Server::serve_forever() {
+void Server::serveForever() {
     this->active = true;
-    this->main_thread = std::thread(&Server::main_loop, this);
+    this->main_thread = std::thread(&Server::mainLoop, this);
 }
 
 /*
@@ -76,7 +80,7 @@ void Server::serve_forever() {
     anything in server. Any other threads should use locks if they need to
     access things, or queue things to this thread.
 */
-void Server::main_loop() {
+void Server::mainLoop() {
     Ticker t = Ticker(this->sv_tickrate->getInt());
 
     while (this->active) {
@@ -129,10 +133,19 @@ void Server::loadCvars() {
 }
 
 void Server::addWorld(ServerWorld *w) {
+    if (this->worlds.count(w->wf->name)) {
+        ERROR("Cannot add world with name %s, another world with that"
+            "name already exists!", w->wf->name.c_str());
+        throw Exception("Failed to add world to server, already exists!");
+    }
+
     this->worlds[w->wf->name] = w;
+
+    // TODO: Worlds should have their own update threads, we need to spawn
+    //  that here.
 }
 
-void Server::setupDatabase() {
+void Server::loadDatabase() {
     int err = SQLITE_OK;
 
     // err = sqlite3_exec(db->db, "CREATE TABLE mods ("
@@ -281,4 +294,23 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
     res.set_data(this->keypair.sign(buffer));
 
     c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
+}
+
+bool Server::verifyLoginServer(std::string &x) {
+    HTTPClient cli;
+
+    char buffer[x.size() + 10];
+    sprintf(buffer, "%s/api/info", x.c_str());
+    HTTPResponse r = cli.request(
+        HTTPRequest(buffer)
+    );
+
+    if (r.code != 200) {
+        ERROR("Failed to verify login server %s (%Li)", x.c_str(), r.code);
+        return false;
+    } else {
+        DEBUG("Verified login server %s", x.c_str());
+    }
+
+    return true;
 }
