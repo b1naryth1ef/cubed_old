@@ -4,31 +4,71 @@
 #include "ioutil.h"
 #include <sodium.h>
 
+#include "gen/packet.pb.h"
+
+class SignedData {
+    public:
+        std::string data;
+        std::string sign;
+
+        SignedData(std::string a, std::string b) {
+            this->data = a;
+            this->sign = b;
+        }
+
+        SignedData(cubednet::SignedMessage m) {
+            this->data = m.data();
+            this->sign = m.signature();
+        }
+
+        void toPacket(cubednet::SignedMessage *m) {
+            m->set_data(this->data);
+            m->set_signature(this->sign);
+        }
+};
 
 class KeyPair {
     private:
-        unsigned char *pubkey;
-        unsigned char *privkey;
+        std::string pubkey;
+        std::string privkey;
 
     public:
         bool empty = true;
 
         std::string getPublicKey() {
-            return std::string(reinterpret_cast<const char*>(this->pubkey));
+            return this->pubkey;
         }
 
-        // TODO: add support for detached mode
-        std::string sign(std::string data) {
-            long long unsigned int buffer_size = crypto_sign_BYTES + (long long) data.size();
-            unsigned char buffer[buffer_size];
+        SignedData sign(const std::string &data) {
+            size_t datalen = data.size();
 
-            assert(crypto_sign(
-                buffer, &buffer_size,
-                (const unsigned char *) data.c_str(), data.size(),
-                this->privkey
-            ) == 0);
+            unsigned char m[datalen];
+            unsigned char signature[crypto_sign_BYTES];
+            unsigned long long siglen;
 
-            return std::string(reinterpret_cast<const char*>(buffer));
+            for (int i=0; i < datalen; i++) m[i] = data[i];
+            crypto_sign(
+                signature, &siglen,
+                m, datalen,
+                (const unsigned char *) this->privkey.c_str()
+            );
+
+            return SignedData(data, std::string((char *) signature, siglen));
+        }
+
+        bool validate(SignedData d) {
+            int res = crypto_sign_verify_detached(
+                (const unsigned char *) d.sign.c_str(),
+                (const unsigned char *) d.data.c_str(),
+                (unsigned long long) d.data.size(),
+                (const unsigned char *) this->pubkey.c_str()
+            );
+
+            if (res != 0) {
+                return false;
+            } else {
+                return true;
+            }
         }
 
         KeyPair(std::string dir) {
@@ -43,21 +83,13 @@ class KeyPair {
                 return;
             }
 
-            this->pubkey = new unsigned char[crypto_box_PUBLICKEYBYTES];
-            this->privkey = new unsigned char[crypto_box_SECRETKEYBYTES];
-
             std::ifstream privf(privpath.c_str());
             std::ifstream pubf(pubpath.c_str());
 
-            privf.read((char *) this->privkey, 32);
-            pubf.read((char *) this->pubkey, 32);
+            privf.read(&this->privkey[0], crypto_sign_SECRETKEYBYTES);
+            pubf.read(&this->pubkey[0], crypto_sign_PUBLICKEYBYTES);
 
             this->empty = false;
-        }
-
-        ~KeyPair() {
-            free(this->pubkey);
-            free(this->privkey);
         }
 
         void generate() {
@@ -65,9 +97,12 @@ class KeyPair {
                 throw Exception("Cannot generate on a filled keyPair!");
             }
 
-            this->pubkey = new unsigned char[crypto_box_PUBLICKEYBYTES];
-            this->privkey = new unsigned char[crypto_box_SECRETKEYBYTES];
-            crypto_box_keypair(this->pubkey, this->privkey);
+            unsigned char pk[crypto_sign_PUBLICKEYBYTES];
+            unsigned char sk[crypto_sign_SECRETKEYBYTES];
+
+            crypto_sign_keypair(pk, sk);
+            this->privkey = std::string((char *) sk, sizeof sk);
+            this->pubkey = std::string((char *) pk, sizeof pk);
             this->empty = false;
         }
 
@@ -93,12 +128,12 @@ class KeyPair {
 
             // Write private
             file.open(privpath, std::ios::out | std::ios::binary);
-            file.write((char*)this->privkey, crypto_box_SECRETKEYBYTES);
+            file.write(this->privkey.c_str(), crypto_sign_SECRETKEYBYTES);
             file.close();
 
             // Write public
             file.open(pubpath, std::ios::out | std::ios::binary);
-            file.write((char*)this->pubkey, crypto_box_PUBLICKEYBYTES);
+            file.write(this->pubkey.c_str(), crypto_sign_PUBLICKEYBYTES);
             file.close();
         }
 };

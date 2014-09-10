@@ -1,5 +1,10 @@
 package cubednet;
 
+message SignedMessage {
+    required bytes data = 1;
+    required bytes signature = 2;
+}
+
 message Packet {
     required uint32 pid = 1;
     required bytes data = 2;
@@ -25,7 +30,7 @@ message PacketStatusResponse {
     required uint32 players = 3;
     required uint32 version = 4;
     required bytes pubkey = 5;
-    required bytes data = 6;
+    required SignedMessage data = 6;
 }
 
 message PacketHello {

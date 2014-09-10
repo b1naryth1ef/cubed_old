@@ -15,6 +15,10 @@ Server::Server() {
         this->keypair.save("keys");
     }
 
+    // SignedData x = this->keypair.sign("{}");
+    // std::string combo = x.combined();
+    // DEBUG("Valid: %i", this->keypair.validate(SignedData(x)));
+
     // Load the server cvars
     this->loadCvars();
     this->config.load();
@@ -304,7 +308,9 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
 
     char buffer[1024];
     sprintf(buffer, "%Ld|%Ld|%i", pk.a1(), pk.a2(), 0);
-    res.set_data(this->keypair.sign(buffer));
+
+    cubednet::SignedMessage *sm(res.mutable_data());
+    this->keypair.sign(buffer).toPacket(sm);
 
     c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
 }
