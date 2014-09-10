@@ -257,16 +257,28 @@ ushort Server::newClientID() {
 }
 
 void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
+    std::string data;
+
+    // If we're connected, the data MUST be encrypted!
+    if (c->state == STATE_CONNECTED) {
+        data = this->keypair.decrypt(
+            pk->data(),
+            pk->nonce(),
+            (* c->key));
+    } else {
+        data = pk->data();
+    }
+
     switch (pk->pid()) {
         case PACKET_HELLO: {
             cubednet::PacketHello pkh;
-            assert(pkh.ParseFromString(pk->data()));
+            assert(pkh.ParseFromString(data));
             this->handlePacketHello(pkh, c);
             break;
         }
         case PACKET_STATUS_REQUEST: {
             cubednet::PacketStatusRequest pkh;
-            assert(pkh.ParseFromString(pk->data()));
+            assert(pkh.ParseFromString(data));
             this->handlePacketStatusRequest(pkh, c);
             break;
         }

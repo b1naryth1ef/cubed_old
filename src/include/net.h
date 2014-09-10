@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global.h"
+#include "crypto.h"
 
 // generated Files
 #include "gen/packet.pb.h"
@@ -120,6 +121,7 @@ class RemoteClient {
         ushort id;
         RemoteClientState state;
         TCPRemoteClient *tcp;
+        KeyPair *key;
 
         std::queue<cubednet::Packet*> packet_buffer;
 

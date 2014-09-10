@@ -8,6 +8,7 @@ message SignedMessage {
 message Packet {
     required uint32 pid = 1;
     required bytes data = 2;
+    optional bytes nonce = 3;
 }
 
 message ModDef {
