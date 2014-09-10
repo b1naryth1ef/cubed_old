@@ -39,6 +39,47 @@ class KeyPair {
             return this->pubkey;
         }
 
+        std::string newNonce() {
+            unsigned char nonce[crypto_box_NONCEBYTES];
+            randombytes_buf(nonce, sizeof nonce);
+            return std::string((char *) nonce, crypto_box_NONCEBYTES);
+        }
+
+        std::string encrypt(const std::string &data, std::string nonce, KeyPair other) {
+            unsigned char encrypted[crypto_box_MACBYTES + data.size()];
+
+            int res = crypto_box_easy(encrypted,
+                (const unsigned char *) data.c_str(), data.size(),
+                (const unsigned char *) nonce.c_str(),
+                (const unsigned char *) other.getPublicKey().c_str(),
+                (const unsigned char *) this->privkey.c_str()
+            );
+
+            if (res != 0) {
+                throw Exception("Failed to encrypt data!");
+            }
+
+            return std::string((char *) encrypted, crypto_box_MACBYTES + data.size());
+        }
+
+        std::string decrypt(const std::string &data, std::string nonce, KeyPair other) {
+            size_t cleartext_len = data.size() - crypto_box_MACBYTES;
+            unsigned char cleartext[cleartext_len];
+
+            int res =crypto_box_open_easy(
+                cleartext,
+                (const unsigned char *) data.c_str(), data.size(),
+                (const unsigned char *) nonce.c_str(),
+                (const unsigned char *) other.getPublicKey().c_str(),
+                (const unsigned char *) this->privkey.c_str()
+            );
+
+            if (res != 0) {
+                throw Exception("Failed to decrypt data!");
+            }
+            return std::string((char *) cleartext, cleartext_len);
+        }
+
         SignedData sign(const std::string &data) {
             size_t datalen = data.size();
 

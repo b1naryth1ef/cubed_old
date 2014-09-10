@@ -15,10 +15,6 @@ Server::Server() {
         this->keypair.save("keys");
     }
 
-    // SignedData x = this->keypair.sign("{}");
-    // std::string combo = x.combined();
-    // DEBUG("Valid: %i", this->keypair.validate(SignedData(x)));
-
     // Load the server cvars
     this->loadCvars();
     this->config.load();
