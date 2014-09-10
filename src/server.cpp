@@ -35,7 +35,7 @@ Server::Server() {
         }
     });
 
-
+    // Open up the server-db (player storage/etc)
     this->db = new DB("server.db");
     if (this->db->is_new) {
         this->loadDatabase();
@@ -50,8 +50,11 @@ Server::Server() {
         this->addWorld(w);
     }
 
+    // Load the mod-index
     this->dex.db = this->db;
-    this->dex.loadFromPath("vanilla");
+    for (auto mod_name : this->config.mods) {
+        this->dex.loadFromPath(mod_name);
+    }
 
     // Create a new TCP server, which will be the main entry point for shit
     this->tcps = new TCPServer(this->config.host_name, this->config.host_port);
@@ -61,7 +64,6 @@ Server::Server() {
         std::placeholders::_1);
     this->tcps->onConnectionData = std::bind(&Server::onTCPConnectionData, this,
         std::placeholders::_1);
-
 }
 
 Server::~Server() {
@@ -202,6 +204,10 @@ void ServerConfig::load() {
     const Value& logins = d["logins"];
     for (Value::ConstValueIterator itr = logins.Begin(); itr != logins.End(); ++itr) {
         this->login_servers.push_back(itr->GetString());
+    }
+    const Value& mods = d["mods"];
+    for (Value::ConstValueIterator itr = mods.Begin(); itr != mods.End(); ++itr) {
+        this->mods.push_back(itr->GetString());
     }
 
     fclose(fp);

@@ -22,6 +22,7 @@ class ServerConfig {
         short tickrate;
 
         std::vector<std::string> login_servers;
+        std::vector<std::string> mods;
 
         void load();
 };
