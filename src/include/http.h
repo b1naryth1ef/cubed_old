@@ -29,6 +29,7 @@ class HTTPResponse {
         }
 };
 
+// TODO: add support for url-params
 class HTTPRequest {
     public:
         std::string url;

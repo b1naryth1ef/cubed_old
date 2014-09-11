@@ -11,6 +11,7 @@
 class ClientConfig {
     public:
         std::string login_server;
+        std::string uid;
 
         void load();
 };
@@ -21,7 +22,10 @@ class Client {
         int tick_rate;
         int fps_rate;
 
-        KeyPair keypair;
+        // The login-server UID for this user
+        std::string login_uid;
+
+        KeyPair keypair = KeyPair("ckeys");
 
         // Networking
         std::string remote_host;

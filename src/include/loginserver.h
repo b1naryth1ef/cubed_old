@@ -8,6 +8,7 @@
 class LoginServer {
     public:
         std::string url;
+        std::string public_key;
         bool valid;
 
         LoginServer(std::string u) {
@@ -51,7 +52,7 @@ class LoginServer {
             // Our guess will start at 0, and grow until it hits load
             int guess = 0;
             bool found = false;
-            char guess_buffer[128];
+            char guess_buffer[512];
 
             // We'll guess until we hit the answer or fail
             while (guess <= load) {
@@ -86,6 +87,11 @@ class LoginServer {
             sprintf(buffer, "%s/api/info", this->url.c_str());
 
             HTTPResponse r = cli.request(HTTPRequest(buffer));
+            rapidjson::Document d;
+            r.asJSON(&d);
+
+            // Load publickey
+            this->public_key = d["key"].GetString();
 
             if (r.code != 200) {
                 ERROR("Failed to verify login server %s", this->url.c_str());
@@ -97,7 +103,7 @@ class LoginServer {
             return true;
         }
 
-        bool createAccount(KeyPair *kp) {
+        std::string createAccount(KeyPair *kp) {
             HTTPClient cli;
 
             // Obtain a proof-of-work response
@@ -124,8 +130,48 @@ class LoginServer {
             rapidjson::Document d;
             r.asJSON(&d);
 
-            DEBUG("Created account!");
+            kp->loadFromString(d["privkey"].GetString(), d["pubkey"].GetString());
+
+            DEBUG("Created account, id %s!", d["uid"].GetString());
+            return d["uid"].GetString();
         }
 
-        std::string login(KeyPair &kp) {}
+        std::string login(std::string uid, KeyPair &kp) {
+            HTTPClient cli;
+
+            std::string proof = this->proveWork();
+            std::string nonce = kp.newNonce();
+
+            unsigned long int sec = time(NULL);
+            char payload[24];
+            sprintf(payload, "%Li", sec);
+
+            std::string encrypted = kp.encrypt(payload, nonce, this->public_key);
+            std::string encrypted_s = base64_encode(
+                (const unsigned char *) encrypted.c_str(),
+                encrypted.size());
+
+            char *nonce_f = curl_easy_escape(cli.c, nonce.c_str(), nonce.size());
+            char *encrypted_f = curl_easy_escape(cli.c, encrypted_s.c_str(), encrypted_s.size());
+
+            char buffer[this->url.size() + 1024];
+            sprintf(buffer, "%s/api/login?uid=%s&nonce=%s&payload=%s&%s",
+                this->url.c_str(),
+                uid.c_str(),
+                nonce_f,
+                encrypted_f,
+                proof.c_str());
+
+            curl_free(nonce_f);
+            curl_free(encrypted_f);
+
+            HTTPRequest req(buffer);
+            HTTPResponse r = cli.request(req);
+
+            DEBUG("%s", r.data.c_str());
+            if (r.code != 200) {
+                ERROR("Failed to login!");
+                throw Exception("Failed to login");
+            }
+        }
 };

@@ -23,7 +23,6 @@ void Client::connect(std::string addr) {
 
     // Load loginserver and validate it
     this->loginserver = new LoginServer(this->config.login_server);
-    this->loginserver->createAccount(&this->keypair);
 
     // if (this->keypair.empty) {
     //     INFO("Generating new c keypair");
@@ -35,6 +34,7 @@ void Client::connect(std::string addr) {
     this->tcpcli = new TCPClient(this->remote_host, this->remote_port);
     this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
     this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
+    this->tcpcli->onConnectionOpen = std::bind(&Client::onConnectionOpen, this);
     this->tcpcli->conn();
 }
 
@@ -101,9 +101,12 @@ bool Client::onConnectionClose() {
 bool Client::onConnectionOpen() {
     DEBUG("Creating login session...");
     if (this->keypair.empty) {
-        this->loginserver->createAccount(&this->keypair);
+        this->login_uid = this->loginserver->createAccount(&this->keypair);
+        this->keypair.save("ckeys");
     }
-    this->session = this->loginserver->login(this->keypair);
+
+    this->login_uid = this->config.uid;
+    this->session = this->loginserver->login(this->login_uid, this->keypair);
     // cubednet::PacketHello pkh;
 
     // pkh.set_username("test");
@@ -117,4 +120,5 @@ void ClientConfig::load() {
     loadJSONFile("client.json", &d);
 
     this->login_server = d["login_server"].GetString();
+    this->uid = d["uid"].GetString();
 }

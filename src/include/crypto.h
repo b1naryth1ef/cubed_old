@@ -78,12 +78,16 @@ class KeyPair {
         }
 
         std::string encrypt(const std::string &data, std::string nonce, KeyPair other) {
+            return this->encrypt(data, nonce, other.getPublicKey());
+        }
+
+        std::string encrypt(const std::string &data, std::string nonce, std::string other) {
             unsigned char encrypted[crypto_box_MACBYTES + data.size()];
 
             int res = crypto_box_easy(encrypted,
                 (const unsigned char *) data.c_str(), data.size(),
                 (const unsigned char *) nonce.c_str(),
-                (const unsigned char *) other.getPublicKey().c_str(),
+                (const unsigned char *) other.c_str(),
                 (const unsigned char *) this->privkey.c_str()
             );
 
