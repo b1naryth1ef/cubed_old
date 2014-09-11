@@ -3,8 +3,40 @@
 #include "global.h"
 #include "ioutil.h"
 #include <sodium.h>
+#include <algorithm>
 
 #include "gen/packet.pb.h"
+
+static std::string sha512(std::string data) {
+    unsigned char out[crypto_hash_sha512_BYTES];
+    crypto_hash_sha512_state state;
+
+    crypto_hash_sha512_init(&state);
+    crypto_hash_sha512_update(&state,
+        (const unsigned char *) data.c_str(),
+        data.size());
+    crypto_hash_sha512_final(&state, out);
+
+    return std::string((char *) out, crypto_hash_sha512_BYTES);
+}
+
+
+static std::string string_to_hex(const std::string& input) {
+    static const char* const lut = "0123456789ABCDEF";
+    size_t len = input.length();
+
+    std::string output;
+    output.reserve(2 * len);
+    for (size_t i = 0; i < len; ++i)
+    {
+        const unsigned char c = input[i];
+        output.push_back(lut[c >> 4]);
+        output.push_back(lut[c & 15]);
+    }
+
+    std::transform(output.begin(), output.end(), output.begin(), ::tolower);
+    return output;
+}
 
 class SignedData {
     public:
@@ -112,6 +144,13 @@ class KeyPair {
             }
         }
 
+        KeyPair() {}
+
+        void loadFromString(std::string priv, std::string pub) {
+            this->privkey = priv;
+            this->pubkey = pub;
+        }
+
         KeyPair(std::string dir) {
             if (!ioutil::file_exists(dir)) {
                 return;
@@ -178,4 +217,3 @@ class KeyPair {
             file.close();
         }
 };
-

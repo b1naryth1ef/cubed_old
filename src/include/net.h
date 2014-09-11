@@ -79,7 +79,7 @@ class TCPServer {
         TCPServerHook onConnectionClose;
         TCPServerHook onConnectionData;
 
-        TCPServer(std::string, short);
+        TCPServer(std::string, ushort);
         ~TCPServer();
 
         void stop();
@@ -90,8 +90,11 @@ class TCPServer {
         bool makeNonBlocking(int);
 };
 
+typedef std::function<bool (void)> TCPClientHook;
+
 class TCPClient {
     public:
+        TCPClient(std::string, ushort);
         ~TCPClient();
 
         std::string remote_host;
@@ -100,10 +103,13 @@ class TCPClient {
         bool active = true;
 
         std::thread read_loop_thread;
-
         std::vector<char> buffer;
 
-        bool conn(std::string, ushort);
+        TCPClientHook onConnectionData;
+        TCPClientHook onConnectionClose;
+        TCPClientHook onConnectionOpen;
+
+        bool conn();
         void read_loop();
         void send_packet(int, google::protobuf::Message*);
 };

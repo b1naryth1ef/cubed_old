@@ -21,7 +21,7 @@ static int openTCPSocket(std::string host, short port) {
     return sockfd;
 }
 
-TCPServer::TCPServer(std::string host, short port) {
+TCPServer::TCPServer(std::string host, ushort port) {
     this->sfd = openTCPSocket(host, port);
     if (this->sfd == -1) {
         throw Exception("Error creating TCP socket!");
@@ -202,10 +202,12 @@ void RemoteClient::tryParse() {
     this->packet_buffer.push(packet);
 }
 
-bool TCPClient::conn(std::string host, ushort port) {
+TCPClient::TCPClient(std::string host, ushort port) {
     this->remote_host = host;
     this->remote_port = port;
+}
 
+bool TCPClient::conn() {
     struct sockaddr_in servaddr;
     this->fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -222,14 +224,11 @@ bool TCPClient::conn(std::string host, ushort port) {
         return false;
     }
 
-    this->read_loop_thread = std::thread(&TCPClient::read_loop, this);
+    if (this->onConnectionOpen) {
+        this->onConnectionOpen();
+    }
 
-    // Send Hello
-    cubednet::PacketHello pkh;
-    pkh.set_username("test");
-    pkh.set_hashcode("0");
-    pkh.set_version(CUBED_VERSION);
-    this->send_packet(PACKET_HELLO, &pkh);
+    this->read_loop_thread = std::thread(&TCPClient::read_loop, this);
 
     return true;
 }
@@ -247,7 +246,14 @@ void TCPClient::read_loop() {
         }
 
         this->buffer.insert(this->buffer.end(), buffer, buffer + n);
+        if (this->onConnectionData != nullptr) {
+            this->onConnectionData();
+        }
         DEBUG("Recieved %i bytes...", n);
+    }
+
+    if (this->onConnectionClose != nullptr) {
+        this->onConnectionClose();
     }
 }
 

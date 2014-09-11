@@ -34,12 +34,11 @@ message PacketStatusResponse {
     required SignedMessage data = 6;
 }
 
-message PacketHello {
-    required string username = 1;
-    required string hashcode = 2;
+// Client -> Server
+message PacketHandshake {
+    required string session = 1;
+    required string loginserver = 2;
     required uint32 version = 3;
-
-    repeated ModDef mods = 4;
 }
 
 message PacketDisconnect {

@@ -3,6 +3,15 @@
 #include <string>
 #include <curl/curl.h>
 
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/filereadstream.h"
+#include "rapidjson/prettywriter.h"
+#include "rapidjson/filestream.h"
+
+using namespace rapidjson;
+
 static size_t util_write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     std::string *buff = (std::string *) userp;
     size_t realsize = size * nmemb;
@@ -14,6 +23,10 @@ class HTTPResponse {
     public:
         long code;
         std::string data;
+
+        void asJSON(Document *d) {
+            d->Parse(this->data.c_str());
+        }
 };
 
 class HTTPRequest {

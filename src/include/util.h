@@ -221,3 +221,23 @@ class Dict {
             return false;
         }
 };
+
+static void loadJSONFile(std::string path, Document *d) {
+    FILE *fp = fopen(path.c_str(), "r");
+
+    if (!fp) {
+        throw Exception("Failed to open JSON file");
+    }
+
+    char readBuffer[65536];
+    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+
+    try {
+        d->ParseStream(is);
+    } catch (std::string e) {
+        throw Exception("Error occured while parsing JSON file!");
+    }
+
+    fclose(fp);
+}
+

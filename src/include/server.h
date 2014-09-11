@@ -112,6 +112,6 @@ class Server {
 
         // Hooks for packets
         void handlePacket(cubednet::Packet *pk, RemoteClient *c);
-        void handlePacketHello(cubednet::PacketHello pk, RemoteClient *c);
+        // void handlePacketHello(cubednet::PacketHello pk, RemoteClient *c);
         void handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c);
 };

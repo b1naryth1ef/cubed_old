@@ -18,8 +18,24 @@ void Client::connect(std::string addr) {
         this->remote_port = (short) std::stoi(arr[1], &sz);
     }
 
+    // Load client configuration
+    this->config.load();
+
+    // Load loginserver and validate it
+    this->loginserver = new LoginServer(this->config.login_server);
+    this->loginserver->createAccount(&this->keypair);
+
+    // if (this->keypair.empty) {
+    //     INFO("Generating new c keypair");
+    //     this->keypair.generate();
+    //     this->keypair.save("keys");
+    // }
+
     DEBUG("Client has host `%s` and port `%d`", this->remote_host.c_str(), this->remote_port);
-    this->tcpcli.conn(this->remote_host, this->remote_port);
+    this->tcpcli = new TCPClient(this->remote_host, this->remote_port);
+    this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
+    this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
+    this->tcpcli->conn();
 }
 
 void Client::run() {
@@ -72,4 +88,33 @@ void Client::shutdown() {
 
     SDL_Quit();
     delete(this->main_window);
+}
+
+bool Client::onConnectionData() {
+    DEBUG("Got data!");
+}
+
+bool Client::onConnectionClose() {
+    DEBUG("Connection closed!");
+}
+
+bool Client::onConnectionOpen() {
+    DEBUG("Creating login session...");
+    if (this->keypair.empty) {
+        this->loginserver->createAccount(&this->keypair);
+    }
+    this->session = this->loginserver->login(this->keypair);
+    // cubednet::PacketHello pkh;
+
+    // pkh.set_username("test");
+    // pkh.set_hashcode("0");
+    // pkh.set_version(CUBED_VERSION);
+    // this->send_packet(PACKET_HELLO, &pkh);
+}
+
+void ClientConfig::load() {
+    Document d;
+    loadJSONFile("client.json", &d);
+
+    this->login_server = d["login_server"].GetString();
 }

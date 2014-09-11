@@ -5,6 +5,15 @@
 #include "net.h"
 #include "util.h"
 #include "renderer.h"
+#include "crypto.h"
+#include "loginserver.h"
+
+class ClientConfig {
+    public:
+        std::string login_server;
+
+        void load();
+};
 
 class Client {
     public:
@@ -12,14 +21,20 @@ class Client {
         int tick_rate;
         int fps_rate;
 
+        KeyPair keypair;
+
         // Networking
         std::string remote_host;
         short remote_port;
 
         ClientWorld *world;
-        TCPClient tcpcli;
+        ClientConfig config;
+        LoginServer *loginserver;
+        TCPClient *tcpcli;
 
         Window *main_window;
+
+        std::string session;
 
         Client() {
             tick_rate = 64;
@@ -28,7 +43,15 @@ class Client {
 
         ~Client() {
             this->shutdown();
+            delete(this->world);
+            delete(this->loginserver);
+            delete(this->tcpcli);
+            delete(this->main_window);
         }
+
+        bool onConnectionData();
+        bool onConnectionClose();
+        bool onConnectionOpen();
 
         bool setup();
         void run();

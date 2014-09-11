@@ -173,23 +173,8 @@ void Server::loadDatabase() {
 }
 
 void ServerConfig::load() {
-    FILE *fp = fopen("server.json", "r");
-
-    if (!fp) {
-        ERROR("Could not open server configuration file `server.json`!");
-        throw Exception("Failed to load server configuration file!");
-    }
-
-    char readBuffer[65536];
-    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
     Document d;
-
-    try {
-        d.ParseStream(is);
-    } catch (std::string e) {
-        ERROR("Error occured while parsing server configuration: %s", e.c_str());
-        throw Exception("Error occured while parsing server configuration!");
-    }
+    loadJSONFile("server.json", &d);
 
     this->name = d["name"].GetString();
     this->host_name = d["host"]["name"].GetString();
@@ -209,8 +194,6 @@ void ServerConfig::load() {
     for (Value::ConstValueIterator itr = mods.Begin(); itr != mods.End(); ++itr) {
         this->mods.push_back(itr->GetString());
     }
-
-    fclose(fp);
 }
 
 bool Server::onCVarChange(CVar *cv, Container *new_value) {
@@ -270,12 +253,12 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
     }
 
     switch (pk->pid()) {
-        case PACKET_HELLO: {
-            cubednet::PacketHello pkh;
-            assert(pkh.ParseFromString(data));
-            this->handlePacketHello(pkh, c);
-            break;
-        }
+        // case PACKET_HELLO: {
+        //     cubednet::PacketHello pkh;
+        //     assert(pkh.ParseFromString(data));
+        //     this->handlePacketHello(pkh, c);
+        //     break;
+        // }
         case PACKET_STATUS_REQUEST: {
             cubednet::PacketStatusRequest pkh;
             assert(pkh.ParseFromString(data));
@@ -286,22 +269,22 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
 
 }
 
-void Server::handlePacketHello(cubednet::PacketHello pk, RemoteClient *c) {
-    DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
-    if (pk.version() != CUBED_VERSION) {
-        c->disconnect(2, "Invalid Cubed Version!");
-        return;
-    }
+// void Server::handlePacketHello(cubednet::PacketHello pk, RemoteClient *c) {
+//     DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
+//     if (pk.version() != CUBED_VERSION) {
+//         c->disconnect(2, "Invalid Cubed Version!");
+//         return;
+//     }
 
-    if (c->state != STATE_NEW) {
-        c->disconnect(1, "Generic Protocol Error.");
-        return;
-    }
+//     if (c->state != STATE_NEW) {
+//         c->disconnect(1, "Generic Protocol Error.");
+//         return;
+//     }
 
-    c->state = STATE_HANDSHAKE;
-    DEBUG("Would send handshake...");
-    // TODO: send back handshaking packet
-}
+//     c->state = STATE_HANDSHAKE;
+//     DEBUG("Would send handshake...");
+//     // TODO: send back handshaking packet
+// }
 
 void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c) {
     // Make sure the junk data is the right size. This is used to prevent
