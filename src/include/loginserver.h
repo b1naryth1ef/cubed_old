@@ -91,7 +91,7 @@ class LoginServer {
             r.asJSON(&d);
 
             // Load publickey
-            this->public_key = d["key"].GetString();
+            this->public_key = base64_decode(d["key"].GetString());
 
             if (r.code != 200) {
                 ERROR("Failed to verify login server %s", this->url.c_str());
@@ -130,7 +130,9 @@ class LoginServer {
             rapidjson::Document d;
             r.asJSON(&d);
 
-            kp->loadFromString(d["privkey"].GetString(), d["pubkey"].GetString());
+            kp->loadFromString(
+                base64_decode(d["privkey"].GetString()),
+                base64_decode(d["pubkey"].GetString()));
 
             DEBUG("Created account, id %s!", d["uid"].GetString());
             return d["uid"].GetString();
