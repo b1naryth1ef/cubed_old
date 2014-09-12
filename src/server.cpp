@@ -207,6 +207,7 @@ bool Server::onTCPConnectionOpen(TCPRemoteClient *c) {
     rc->state = STATE_NEW;
     rc->tcp = c;
     rc->id = c->id = this->newClientID();
+    c->remote = rc;
 
     this->clients_mutex.lock();
     this->clients[rc->id] = rc;
@@ -247,18 +248,18 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
         data = this->keypair.decrypt(
             pk->data(),
             pk->nonce(),
-            (* c->key));
+            (* c->our_kp));
     } else {
         data = pk->data();
     }
 
     switch (pk->pid()) {
-        // case PACKET_HELLO: {
-        //     cubednet::PacketHello pkh;
-        //     assert(pkh.ParseFromString(data));
-        //     this->handlePacketHello(pkh, c);
-        //     break;
-        // }
+        case PACKET_HANDSHAKE: {
+            cubednet::PacketHandshake pkh;
+            assert(pkh.ParseFromString(data));
+            this->handlePacketHandshake(pkh, c);
+            break;
+        }
         case PACKET_STATUS_REQUEST: {
             cubednet::PacketStatusRequest pkh;
             assert(pkh.ParseFromString(data));
@@ -269,22 +270,33 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
 
 }
 
-// void Server::handlePacketHello(cubednet::PacketHello pk, RemoteClient *c) {
-//     DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
-//     if (pk.version() != CUBED_VERSION) {
-//         c->disconnect(2, "Invalid Cubed Version!");
-//         return;
-//     }
+void Server::handlePacketHandshake(cubednet::PacketHandshake pk, RemoteClient *c) {
+    DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
+    if (pk.version() != CUBED_VERSION) {
+        c->disconnect(1, "Invalid Cubed Version!");
+        return;
+    }
 
-//     if (c->state != STATE_NEW) {
-//         c->disconnect(1, "Generic Protocol Error.");
-//         return;
-//     }
+    if (c->state != STATE_NEW) {
+        c->disconnect(1, "Generic Protocol Error.");
+        return;
+    }
 
-//     c->state = STATE_HANDSHAKE;
-//     DEBUG("Would send handshake...");
-//     // TODO: send back handshaking packet
-// }
+    if (pk.session() != 0) {
+        c->disconnect(1, "Login servers are not supported yet!");
+        return;
+    }
+
+    c->state = STATE_HANDSHAKE;
+    c->our_kp = new KeyPair();
+    c->our_kp->loadFromString("", pk.pubkey());
+    c->serv_kp = &this->keypair;
+
+    // Send a init packet, this is now encrypted
+    cubednet::PacketInit pkinit;
+    pkinit.set_id(c->id);
+    c->tcp->send_packet(PACKET_INIT, &pkinit);
+}
 
 void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c) {
     // Make sure the junk data is the right size. This is used to prevent

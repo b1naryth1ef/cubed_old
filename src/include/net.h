@@ -18,15 +18,19 @@
 enum PacketType {
     PACKET_STATUS_REQUEST,
     PACKET_STATUS_RESPONSE,
-    PACKET_HELLO,
+    PACKET_HANDSHAKE,
+    PACKET_INIT,
     PACKET_DC,
 };
 
 class Packet {};
 
 #define MAXEVENTS 128
+#define STATUS_JUNK_DATA_SIZE 256
 
 static int openTCPSocket(std::string, short);
+
+class RemoteClient;
 
 class TCPRemoteClient {
     public:
@@ -37,6 +41,8 @@ class TCPRemoteClient {
 
         std::vector<char> buffer;
 
+        RemoteClient *remote;
+
         TCPRemoteClient(int f, std::string h, ushort p) {
             this->fd = f;
             this->host = h;
@@ -44,7 +50,7 @@ class TCPRemoteClient {
         }
 
         ~TCPRemoteClient() {
-            close(this->fd);
+            if (this->fd) close(this->fd);
         }
 
         std::string toString() {
@@ -64,6 +70,7 @@ typedef std::function<bool (TCPRemoteClient *)> TCPServerHook;
 
 class TCPServer {
     public:
+        KeyPair *kp;
         std::map<int, TCPRemoteClient*> clients;
 
         int sfd, efd;
@@ -94,6 +101,9 @@ typedef std::function<bool (void)> TCPClientHook;
 
 class TCPClient {
     public:
+        KeyPair *our_kp;
+        KeyPair *serv_kp;
+
         TCPClient(std::string, ushort);
         ~TCPClient();
 
@@ -127,9 +137,14 @@ class RemoteClient {
         ushort id;
         RemoteClientState state;
         TCPRemoteClient *tcp;
-        KeyPair *key;
 
         std::queue<cubednet::Packet*> packet_buffer;
+
+        // Clients keypairs
+        KeyPair *our_kp;
+
+        // Severs keypair
+        KeyPair *serv_kp;
 
         void tryParse();
         void disconnect(int, const std::string);

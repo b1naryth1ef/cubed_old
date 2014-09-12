@@ -10,8 +10,6 @@
 #include "crypto.h"
 #include "loginserver.h"
 
-#define STATUS_JUNK_DATA_SIZE 256
-
 class ServerConfig {
     public:
         std::string name;
@@ -112,6 +110,6 @@ class Server {
 
         // Hooks for packets
         void handlePacket(cubednet::Packet *pk, RemoteClient *c);
-        // void handlePacketHello(cubednet::PacketHello pk, RemoteClient *c);
+        void handlePacketHandshake(cubednet::PacketHandshake, RemoteClient *c);
         void handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c);
 };

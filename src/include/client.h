@@ -12,6 +12,7 @@ class ClientConfig {
     public:
         std::string login_server;
         std::string uid;
+        bool auth;
 
         void load();
 };
@@ -26,6 +27,7 @@ class Client {
         std::string login_uid;
 
         KeyPair keypair = KeyPair("ckeys");
+        KeyPair *serv_kp;
 
         // Networking
         std::string remote_host;
@@ -38,7 +40,7 @@ class Client {
 
         Window *main_window;
 
-        std::string session;
+        int session;
 
         Client() {
             tick_rate = 64;
@@ -56,6 +58,10 @@ class Client {
         bool onConnectionData();
         bool onConnectionClose();
         bool onConnectionOpen();
+
+        void handlePacket(cubednet::Packet *pk);
+        void handlePacketInit(cubednet::PacketInit *pk);
+        void handlePacketStatusResponse(cubednet::PacketStatusResponse *pk);
 
         bool setup();
         void run();

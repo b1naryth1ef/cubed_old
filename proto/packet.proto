@@ -36,9 +36,16 @@ message PacketStatusResponse {
 
 // Client -> Server
 message PacketHandshake {
-    required string session = 1;
+    required uint32 session = 1;
     required string loginserver = 2;
     required uint32 version = 3;
+
+    optional bytes pubkey = 4;
+}
+
+// Server -> Client (enc)
+message PacketInit {
+    required uint32 id = 1;
 }
 
 message PacketDisconnect {

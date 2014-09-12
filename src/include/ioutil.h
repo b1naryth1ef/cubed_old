@@ -8,6 +8,7 @@ This holds utilities for disk and network IO
 #include <fstream>
 #include <sys/stat.h>
 #include <vector>
+#include <pwd.h>
 
 namespace ioutil {
 
@@ -23,12 +24,19 @@ inline std::string join(std::string a, std::string b) {
     return a + "/" + b;
 }
 
-// std::string join_multi(vstring li) {
-//     std::string result;
-//     for ( auto &i : li ) {
-//         result = result + i;
-//     }
-// }
+static std::string getDataDirectory() {
+    struct passwd *pw = getpwuid(getuid());
+    std::string res = join(pw->pw_dir, ".cubed");
+    return res;
+}
+
+static std::string setupDataDirectory() {
+    std::string dir = getDataDirectory();
+    if (!file_exists(dir)) {
+        mkdir(dir.c_str(), 0777);
+    }
+    return dir;
+}
 
 // Multiwriter is a simple class that allows writing to multiple ostream objects at once.
 class MultiWriter {

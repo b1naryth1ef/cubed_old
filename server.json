@@ -7,7 +7,7 @@
     "worlds": ["testworld"],
     "tickrate": 64,
     "logins": [
-        "hackle.hydr0.com"
+        "localhost:5000"
     ],
     "mods": []
 }

@@ -260,17 +260,25 @@ void TCPClient::read_loop() {
 void TCPClient::send_packet(int id, google::protobuf::Message *data) {
     std::string buffa, buffb;
     cubednet::Packet pk;
+    pk.set_pid(id);
 
     data->SerializeToString(&buffa);
 
-    pk.set_pid(id);
-    pk.set_data(buffa);
-    pk.SerializeToString(&buffb);
+    if (this->our_kp && this->serv_kp) {
+        std::string nonce = this->our_kp->newNonce();
+        std::string encd = this->our_kp->encrypt(buffa, nonce, (* this->serv_kp));
+        pk.set_data(encd);
+        pk.set_nonce(nonce);
+    } else {
+        pk.set_data(buffa);
+    }
 
+    pk.SerializeToString(&buffb);
     write(this->fd, buffb.c_str(), buffb.size());
 }
 
 TCPClient::~TCPClient() {
+    if (this->serv_kp != nullptr) delete(serv_kp);
     this->active = false;
     alarm(1);
     this->read_loop_thread.join();
@@ -295,12 +303,20 @@ void RemoteClient::terminate() {
 void TCPRemoteClient::send_packet(int id, google::protobuf::Message *data) {
     std::string buffa, buffb;
     cubednet::Packet pk;
+    pk.set_pid(id);
 
     data->SerializeToString(&buffa);
 
-    pk.set_pid(id);
-    pk.set_data(buffa);
-    pk.SerializeToString(&buffb);
+    if (this->remote->state > STATE_NEW) {
+        std::string nonce = this->remote->serv_kp->newNonce();
+        std::string encd = this->remote->serv_kp->encrypt(buffa, nonce,
+            (* this->remote->our_kp));
+        pk.set_data(encd);
+        pk.set_nonce(nonce);
+    } else {
+        pk.set_data(buffa);
+    }
 
+    pk.SerializeToString(&buffb);
     write(this->fd, buffb.c_str(), buffb.size());
 }

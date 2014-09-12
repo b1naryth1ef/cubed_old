@@ -138,7 +138,7 @@ class LoginServer {
             return d["uid"].GetString();
         }
 
-        std::string login(std::string uid, KeyPair &kp) {
+        int login(std::string uid, KeyPair &kp) {
             HTTPClient cli;
 
             std::string proof = this->proveWork();

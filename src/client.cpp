@@ -18,6 +18,9 @@ void Client::connect(std::string addr) {
         this->remote_port = (short) std::stoi(arr[1], &sz);
     }
 
+    // Setup data directory
+    ioutil::setupDataDirectory();
+
     // Load client configuration
     this->config.load();
 
@@ -91,7 +94,20 @@ void Client::shutdown() {
 }
 
 bool Client::onConnectionData() {
-    DEBUG("Got data!");
+    if (!this->tcpcli->buffer.size()) {
+        return true;
+    }
+
+    // GC: This is cleaned up in the server parsing loop
+    cubednet::Packet *packet = new cubednet::Packet;
+    if (!packet->ParseFromArray(&this->tcpcli->buffer[0], this->tcpcli->buffer.size())) {
+        WARN("Failed to parse data, assuming we need more...");
+        return true;
+    }
+
+    this->handlePacket(packet);
+
+    DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
 }
 
 bool Client::onConnectionClose() {
@@ -99,21 +115,86 @@ bool Client::onConnectionClose() {
 }
 
 bool Client::onConnectionOpen() {
-    DEBUG("Creating login session...");
-    if (this->keypair.empty) {
-        this->login_uid = this->loginserver->createAccount(&this->keypair);
-        this->keypair.save("ckeys");
+    cubednet::PacketStatusRequest pksr;
+
+    unsigned char junk[STATUS_JUNK_DATA_SIZE];
+    randombytes_buf(junk, sizeof junk);
+    pksr.set_data((const char *) junk);
+
+    // TODO: track state
+    pksr.set_a1(randombytes_uniform(MAX_UINT32));
+    pksr.set_a2(randombytes_uniform(MAX_UINT32));
+
+
+    // cubednet::PacketHandshake pk;
+    // pk.set_version(CUBED_VERSION);
+
+    // if (!this->config.auth) {
+    //     INFO("Login Servers are disabled, attempting blank auth.");
+
+    //     if (this->keypair.empty) {
+    //         this->keypair.generate();
+    //     }
+    //     pk.set_session(0);
+    //     pk.set_loginserver("");
+    //     pk.set_pubkey(this->keypair.getPublicKey());
+    // } else {
+    //     INFO("Attempting to authenticate with login server...");
+
+    //     if (this->keypair.empty) {
+    //         DEBUG("Creating a new account...");
+    //         this->login_uid = this->loginserver->createAccount(&this->keypair);
+    //         this->keypair.save("ckeys");
+    //     }
+
+    //     DEBUG("Creating login session...");
+    //     this->login_uid = this->config.uid;
+    //     this->session = this->loginserver->login(this->login_uid, this->keypair);
+    //     pk.set_session(this->session);
+    //     pk.set_loginserver(this->loginserver->url);
+    // }
+
+    // DEBUG("Saving client keypair...");
+    // this->keypair.save(ioutil::join(ioutil::getDataDirectory(), "keys"));
+
+    // DEBUG("Sending handshake packet...");
+    // this->tcpcli->send_packet(PACKET_HANDSHAKE, &pk);
+}
+
+void Client::handlePacket(cubednet::Packet *pk) {
+    std::string data;
+
+    if (pk->has_nonce()) {
+        data = this->keypair.decrypt(
+            pk->data(),
+            pk->nonce(),
+            (*this->serv_kp));
+    } else {
+        data = pk->data();
     }
 
-    this->login_uid = this->config.uid;
-    this->session = this->loginserver->login(this->login_uid, this->keypair);
-    // cubednet::PacketHello pkh;
-
-    // pkh.set_username("test");
-    // pkh.set_hashcode("0");
-    // pkh.set_version(CUBED_VERSION);
-    // this->send_packet(PACKET_HELLO, &pkh);
+    switch (pk->pid()) {
+        case PACKET_INIT: {
+            cubednet::PacketInit pkh;
+            assert(pkh.ParseFromString(data));
+            this->handlePacketInit(&pkh);
+        }
+        case PACKET_STATUS_RESPONSE: {
+            cubednet::PacketStatusResponse pkh;
+            assert(pkh.ParseFromString(data));
+            this->handlePacketStatusResponse(&pkh);
+        }
+    }
 }
+
+void Client::handlePacketInit(cubednet::PacketInit *pk) {
+
+}
+
+void Client::handlePacketStatusResponse(cubednet::PacketStatusResponse *pk) {
+
+}
+
 
 void ClientConfig::load() {
     Document d;
@@ -121,4 +202,5 @@ void ClientConfig::load() {
 
     this->login_server = d["login_server"].GetString();
     this->uid = d["uid"].GetString();
+    this->auth = d["auth"].GetBool();
 }

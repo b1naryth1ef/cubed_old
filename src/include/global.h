@@ -61,3 +61,5 @@ class Server;
 
 static Server *s = nullptr;
 static Client *c = nullptr;
+
+#define MAX_UINT32 2147483647

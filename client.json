@@ -1,4 +1,5 @@
 {
-    "login_server": "hackle.hydr0.com",
-    "uid": "475da430-d146-4ff1-b552-e616f6c982d5"
+    "login_server": "localhost:5000",
+    "uid": "8e04abc7-cb6b-4e79-9389-7d1a958ca209",
+    "auth": false
 }
