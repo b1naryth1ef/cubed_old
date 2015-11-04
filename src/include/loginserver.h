@@ -88,18 +88,17 @@ class LoginServer {
             sprintf(buffer, "%s/api/info", this->url.c_str());
 
             HTTPResponse r = cli.request(HTTPRequest(buffer));
+            if (r.code != 200) {
+              ERROR("Failed to verify login server %s", this->url.c_str());
+              return false;
+            }
+
             rapidjson::Document d;
             r.asJSON(&d);
 
             // Load publickey
             this->public_key = base64_decode(d["key"].GetString());
-
-            if (r.code != 200) {
-                ERROR("Failed to verify login server %s", this->url.c_str());
-                return false;
-            } else {
-                INFO("Verified login server %s", this->url.c_str());
-            }
+            INFO("Verified login server %s", this->url.c_str());
 
             return true;
         }
