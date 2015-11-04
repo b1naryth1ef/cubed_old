@@ -1,11 +1,12 @@
 #pragma once
 
+#include "util/util.h"
+#include "util/crypto.h"
+
 #include "global.h"
 #include "world.h"
 #include "net.h"
-#include "util.h"
 #include "renderer.h"
-#include "crypto.h"
 #include "loginserver.h"
 
 class ClientConfig {

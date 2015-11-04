@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global.h"
-#include "util.h"
+#include "util/util.h"
 
 /*
 Cvars are client/server variables which take their inspiration from quake3.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global.h"
-#include "crypto.h"
+#include "util/crypto.h"
 
 // generated Files
 #include "gen/packet.pb.h"

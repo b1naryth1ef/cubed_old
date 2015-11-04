@@ -27,12 +27,12 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/prettywriter.h"
-#include "rapidjson/filestream.h"
+// #include "rapidjson/filestream.h"
 
 // Sqlite3
 #include <sqlite3.h>
 
-#include "log.h"
+#include "util/log.h"
 
 #define MULTI_LINE_STRING(a) #a
 
@@ -42,7 +42,7 @@ static int CUBED_RELEASE_A = 0;
 static int CUBED_RELEASE_B = 0;
 static int CUBED_RELEASE_C = 4;
 
-static int CUBED_VERSION = CUBED_RELEASE_C >> CUBED_RELEASE_B >> CUBED_RELEASE_A; 
+static int CUBED_VERSION = CUBED_RELEASE_C >> CUBED_RELEASE_B >> CUBED_RELEASE_A;
 
 #define DEBUG(x, ...)  LOG.L("DEBUG", x, ## __VA_ARGS__)
 #define INFO(x, ...)   LOG.L("INFO ", x, ## __VA_ARGS__)

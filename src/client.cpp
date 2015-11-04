@@ -164,7 +164,7 @@ bool Client::onConnectionOpen() {
 void Client::handlePacket(cubednet::Packet *pk) {
     std::string data;
 
-    if (pk->has_nonce()) {
+    if (pk->nonce() != "") {
         data = this->keypair.decrypt(
             pk->data(),
             pk->nonce(),

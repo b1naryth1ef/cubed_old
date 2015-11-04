@@ -3,12 +3,13 @@
 #include "global.h"
 #include "world.h"
 #include "net.h"
-#include "util.h"
 #include "cvar.h"
 #include "mod.h"
 #include "db.h"
-#include "crypto.h"
 #include "loginserver.h"
+
+#include "util/util.h"
+#include "util/crypto.h"
 
 class ServerConfig {
     public:

@@ -1,54 +1,56 @@
+syntax = "proto3";
+
 package cubednet;
 
 message SignedMessage {
-    required bytes data = 1;
-    required bytes signature = 2;
+    bytes data = 1;
+    bytes signature = 2;
 }
 
 message Packet {
-    required uint32 pid = 1;
-    required bytes data = 2;
-    optional bytes nonce = 3;
+    uint32 pid = 1;
+    bytes data = 2;
+    bytes nonce = 3;
 }
 
 message ModDef {
-    required string name = 1;
-    required uint32 version = 2;
-    required bool enabled = 3;
+    string name = 1;
+    uint32 version = 2;
+    bool enabled = 3;
 }
 
 // Client -> Server
 message PacketStatusRequest {
-    required bytes data = 1;
-    required int64 a1 = 2;
-    required int64 a2 = 3;
+    bytes data = 1;
+    int64 a1 = 2;
+    int64 a2 = 3;
 }
 
 // Server -> Client
 message PacketStatusResponse {
-    required string name = 1;
-    required string motd = 2;
-    required uint32 players = 3;
-    required uint32 version = 4;
-    required bytes pubkey = 5;
-    required SignedMessage data = 6;
+    string name = 1;
+    string motd = 2;
+    uint32 players = 3;
+    uint32 version = 4;
+    bytes pubkey = 5;
+    SignedMessage data = 6;
 }
 
 // Client -> Server
 message PacketHandshake {
-    required uint32 session = 1;
-    required string loginserver = 2;
-    required uint32 version = 3;
+    uint32 session = 1;
+    string loginserver = 2;
+    uint32 version = 3;
 
-    optional bytes pubkey = 4;
+    bytes pubkey = 4;
 }
 
 // Server -> Client (enc)
 message PacketInit {
-    required uint32 id = 1;
+    uint32 id = 1;
 }
 
 message PacketDisconnect {
-    required uint32 reason = 1;
-    required string desc = 2;
+    uint32 reason = 1;
+    string desc = 2;
 }

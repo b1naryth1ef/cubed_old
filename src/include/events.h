@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global.h"
-#include "util.h"
+#include "util/util.h"
 
 enum EventState {
     STATE_NULL,

@@ -1,14 +1,8 @@
 #pragma once
 
+#include "global.h"
 #include <string>
 #include <curl/curl.h>
-
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/prettywriter.h"
-#include "rapidjson/filestream.h"
 
 using namespace rapidjson;
 

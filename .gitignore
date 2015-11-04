@@ -8,3 +8,4 @@ src/include/gen/
 cubed
 *.key
 keys/
+core

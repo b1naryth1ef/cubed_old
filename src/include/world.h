@@ -2,10 +2,11 @@
 
 #include "global.h"
 #include "db.h"
-#include "util.h"
 #include "geo.h"
 #include "entity.h"
 #include "gen/world.pb.h"
+
+#include "util/util.h"
 
 using namespace rapidjson;
 
@@ -120,7 +121,7 @@ class Chunk {
 
         BlockCacheT blocks;
 
-        // Represents a list of 
+        // Represents a list of
         std::vector<Point> to_render;
 
         // TODO: will generate a cached texture for each side

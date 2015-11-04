@@ -2,7 +2,7 @@
 
 #include "global.h"
 #include "geo.h"
-#include "util.h"
+#include "util/util.h"
 
 class Entity {
     public:

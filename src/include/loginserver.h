@@ -1,9 +1,10 @@
 #pragma once
 
 #include "global.h"
-#include "http.h"
-#include "crypto.h"
-#include "base64.h"
+
+#include "util/http.h"
+#include "util/crypto.h"
+#include "util/base64.h"
 
 class LoginServer {
     public:
@@ -108,7 +109,7 @@ class LoginServer {
 
             // Obtain a proof-of-work response
             std::string proof = this->proveWork();
-        
+
             // Build the URL
             char buffer[this->url.size() + 128];
             sprintf(buffer, "%s/api/register?%s",

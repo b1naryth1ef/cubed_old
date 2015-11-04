@@ -2,7 +2,7 @@
 
 #include "global.h"
 #include <SDL2/SDL.h>
-#include <GL3/gl3.h>
+#include <GL/gl.h>
 
 class Window {
     public:

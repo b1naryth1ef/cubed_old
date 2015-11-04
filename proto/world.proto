@@ -1,12 +1,13 @@
+syntax = "proto3";
 package cubedworld;
 
 message BlockTypeExtra {
-    required bool persists = 1;
-    required string owner = 2;
+    bool persists = 1;
+    string owner = 2;
 }
 
 message Point {
-    required float x = 1;
-    required float y = 2;
-    required float z = 3;
+    float x = 1;
+    float y = 2;
+    float z = 3;
 }

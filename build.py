@@ -93,6 +93,17 @@ def setup_libsodium():
     os.chdir(start)
     os.system("rm -rf libsodium")
 
+def setup_sdl2():
+    start = os.getcwd()
+    os.system("wget https://www.libsdl.org/release/SDL2-2.0.3.zip")
+    os.system("unzip SDL2-2.0.3.zip")
+    os.chdir("SDL2-2.0.3.zip")
+    os.system("./configure")
+    os.system("make -j8")
+    os.system("sudo make install")
+    os.chdir(start)
+    os.system("rm -rf SDL2-2.0.3.zip")
+
 def setup():
     setup_liblua()
     setup_rapidjson()
