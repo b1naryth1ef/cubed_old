@@ -1,10 +1,12 @@
 #pragma once
 
+#include <terra.h>
+
 #include "global.h"
 #include "db.h"
 #include "geo.h"
 #include "entity.h"
-#include "gen/world.pb.h"
+#include "world.pb.h"
 
 #include "util/util.h"
 

@@ -4,7 +4,7 @@
 #include "util/crypto.h"
 
 // generated Files
-#include "gen/packet.pb.h"
+#include "packet.pb.h"
 
 // Networking specific headers
 #include <sys/types.h>

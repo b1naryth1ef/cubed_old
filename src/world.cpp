@@ -28,6 +28,7 @@ bool WorldFile::open() {
     INFO("Loading worldfile");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
+    Terra::test();
 
     // We could not properly open the file
     if (!fp) {
@@ -37,10 +38,17 @@ bool WorldFile::open() {
 
     // Create a lock for the file, which warns other instances of cubed to not write to
     //  this world file.
-    int lock_result = flock(fileno(fp), LOCK_EX | LOCK_NB);
-    if (lock_result != 0) {
-        ERROR("Error getting lock: %i", lock_result);
-        throw Exception("Error occured getting lock for world file!");
+    if (flock(fileno(fp), LOCK_EX | LOCK_NB != 0)) {
+        if (errno == EWOULDBLOCK) {
+          ERROR("Failed to get world lock, someone else owns it!");
+          throw Exception("Error occured getting lock for world file!");
+        } else if (errno == EINVAL) {
+          WARN("Failed to get world lock, most likely due to incompatible filesystem.");
+          WARN("THIS IS NOT A CRITICAL ERROR, BUT MAY CAUSE WORLD CORRUPTION.");
+        } else {
+          ERROR("Failed to get world lock, unknown reason: %i", errno);
+          throw Exception("Error occured getting lock for world file!");
+        }
     }
 
     // Read the entire json document

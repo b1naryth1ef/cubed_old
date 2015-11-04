@@ -81,7 +81,7 @@ void TCPServer::processEvent(int i) {
                        sbuf, sizeof sbuf,
                        NI_NUMERICHOST | NI_NUMERICSERV);
 
-            
+
             this->makeNonBlocking(newsockfd);
 
             TCPRemoteClient *c = new TCPRemoteClient(newsockfd, hbuf, atoi(sbuf));

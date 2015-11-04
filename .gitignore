@@ -3,9 +3,10 @@
 *.tmp
 *.o
 *.log
-src/include/gen/
+proto/gen/
 *.db
 cubed
 *.key
 keys/
 core
+build/

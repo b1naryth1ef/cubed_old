@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "gen/packet.pb.h"
+#include "packet.pb.h"
 
 static std::string sha512(std::string data) {
     unsigned char out[crypto_hash_sha512_BYTES];
