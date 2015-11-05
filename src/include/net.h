@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global.h"
+#include "util/util.h"
 #include "util/crypto.h"
 
 // generated Files
@@ -14,6 +15,30 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <sys/epoll.h>
+
+
+// Represents a host/port comb
+struct ConnectionInfo {
+    std::string host;
+    unsigned short port;
+
+    ConnectionInfo(std::string conns) {
+        if (conns.find(':') != -1) {
+            auto parts = splitString(conns, ':');
+            if (parts.size() == 2) {
+                this->host = parts[0];
+
+                std::string::size_type sz;
+                this->port = std::stoi(parts[1], &sz);
+
+                return;
+            }
+        }
+
+        ERROR("Invalid ConnectionInfo string: %s", conns.c_str());
+        throw Exception("Invalid ConnectionInfo string");
+    }
+};
 
 enum PacketType {
     PACKET_STATUS_REQUEST,

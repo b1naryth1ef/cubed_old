@@ -1,13 +1,11 @@
 #pragma once
 
-#include <terra.h>
-
 #include "global.h"
 #include "db.h"
-#include "geo.h"
 #include "entity.h"
 #include "world.pb.h"
 
+#include "util/geo.h"
 #include "util/util.h"
 
 using namespace rapidjson;

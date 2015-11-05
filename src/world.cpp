@@ -28,8 +28,6 @@ bool WorldFile::open() {
     INFO("Loading worldfile");
     fp = fopen(ioutil::join(this->directory, "world.json").c_str(), "r");
 
-    Terra::test();
-
     // We could not properly open the file
     if (!fp) {
         ERROR("Failed to open world file!");

@@ -1,12 +1,14 @@
 #pragma once
 
 #include "global.h"
-#include "world.h"
 #include "net.h"
 #include "cvar.h"
 #include "mod.h"
 #include "db.h"
 #include "loginserver.h"
+
+#include "terra/terra.h"
+#include "terra/blocktype.h"
 
 #include "util/util.h"
 #include "util/crypto.h"
@@ -32,7 +34,10 @@ class Server {
         ushort client_id_inc = 1;
 
         // This holds all the worlds loaded by the server
-        std::map<std::string, ServerWorld*> worlds;
+        std::map<std::string, Terra::World*> worlds;
+
+        // Holds all registered block typeis
+        Terra::BlockTypeCache *types;
 
         // A mapping of connected clients
         std::mutex clients_mutex;
@@ -76,13 +81,16 @@ class Server {
         ~Server();
 
         // Adds a world to the server
-        void addWorld(ServerWorld *);
+        void addWorld(Terra::World *);
 
         // Loads cvars, should be called early (startup)
         void loadCvars();
 
         // Loads the server-database
         void loadDatabase();
+
+        // Loads the base types
+        void loadBaseTypes();
 
         // Shuts the server down
         void shutdown();
@@ -103,6 +111,11 @@ class Server {
         ushort newClientID();
 
         bool verifyLoginServer(std::string&);
+
+        // Manage block types
+        void addBlockType(Terra::BlockType*);
+        void rmvBlockType(std::string);
+        Terra::BlockType* getBlockType(std::string);
 
         // Hooks for the TCP-server
         bool onTCPConnectionClose(TCPRemoteClient *c);

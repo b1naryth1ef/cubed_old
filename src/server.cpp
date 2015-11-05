@@ -44,11 +44,19 @@ Server::Server() {
     this->sv_tickrate->set(this->config.tickrate);
     this->sv_name->set(this->config.name);
 
+    // Create a type cache
+    this->types = new Terra::BlockTypeCache;
+
+    // Load the base types
+    this->loadBaseTypes();
+
+    // Load the worlds we need
     for (auto world_name : this->config.worlds) {
-        ServerWorld *w = new ServerWorld(world_name);
-        w->load();
+        Terra::World *w = new Terra::World(world_name, this->types);
+        w->open();
         this->addWorld(w);
     }
+
 
     // Load the mod-index
     this->dex.db = this->db;
@@ -121,7 +129,7 @@ void Server::tick() {
     this->clients_mutex.unlock();
 
     for (auto w : this->worlds) {
-        w.second->tick();
+        // w.second->tick();
     }
 }
 
@@ -147,14 +155,21 @@ void Server::loadCvars() {
 
 }
 
-void Server::addWorld(ServerWorld *w) {
-    if (this->worlds.count(w->wf->name)) {
+void Server::addWorld(Terra::World *w) {
+    if (this->worlds.count(w->name)) {
         ERROR("Cannot add world with name %s, another world with that"
-            "name already exists!", w->wf->name.c_str());
+            "name already exists!", w->name.c_str());
         throw Exception("Failed to add world to server, already exists!");
     }
 
-    this->worlds[w->wf->name] = w;
+    auto blk = w->get_block(Point(0, 0, 0));
+    if (blk == nullptr) {
+        INFO("We haven't loaded this world before, generating land...");
+        w->generateInitialWorld();
+    } else {
+        INFO("World has been loaded before...");
+    }
+    this->worlds[w->name] = w;
 
     // TODO: Worlds should have their own update threads, we need to spawn
     //  that here.
@@ -234,9 +249,9 @@ bool Server::onTCPConnectionData(TCPRemoteClient *c) {
 
 ushort Server::newClientID() {
     while (this->clients[client_id_inc]) {
-        client_id_inc++; 
+        client_id_inc++;
     }
-    
+
     return client_id_inc;
 }
 
@@ -322,4 +337,25 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
     this->keypair.sign(buffer).toPacket(sm);
 
     c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
+}
+
+void Server::addBlockType(Terra::BlockType *type) {
+    if (this->types->count(type->name)) {
+        WARN("addBlockType replacing type %s", type->name.c_str());
+    }
+
+    (*this->types)[type->name] = type;
+}
+
+void Server::rmvBlockType(std::string type) {
+    this->types->erase(type);
+}
+
+Terra::BlockType* Server::getBlockType(std::string type) {
+    return (*this->types)[type];
+}
+
+void Server::loadBaseTypes() {
+    this->addBlockType(new Terra::AirType());
+    this->addBlockType(new Terra::BedRockType());
 }

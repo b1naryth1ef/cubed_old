@@ -34,7 +34,7 @@ class Client {
         std::string remote_host;
         short remote_port;
 
-        ClientWorld *world;
+        // ClientWorld *world;
         ClientConfig config;
         LoginServer *loginserver;
         TCPClient *tcpcli;
@@ -50,7 +50,7 @@ class Client {
 
         ~Client() {
             this->shutdown();
-            delete(this->world);
+            // delete(this->world);
             delete(this->loginserver);
             delete(this->tcpcli);
             delete(this->main_window);

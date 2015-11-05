@@ -39,3 +39,16 @@ struct pointEqualsFunc {
 
 typedef std::vector<Point*> PointPV;
 typedef std::vector<Point> PointV;
+
+class BoundingBox {
+    public:
+        Point min, max;
+
+        BoundingBox(Point, Point);
+
+        bool contains(Point);
+        bool contains(BoundingBox);
+        bool intersects(BoundingBox);
+};
+
+

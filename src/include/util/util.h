@@ -198,7 +198,7 @@ class Dict {
         Document *toJSON() {
             Document *result = new Document;
             result->SetObject();
-            
+
             for (auto &kv : this->data) {
                 Value k(kv.first.c_str(), result->GetAllocator());
 
@@ -226,6 +226,7 @@ static void loadJSONFile(std::string path, Document *d) {
     FILE *fp = fopen(path.c_str(), "r");
 
     if (!fp) {
+        ERROR("Failed to open JSON file: %s", path.c_str());
         throw Exception("Failed to open JSON file");
     }
 

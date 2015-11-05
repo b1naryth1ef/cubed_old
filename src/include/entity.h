@@ -1,7 +1,7 @@
 #pragma once
 
 #include "global.h"
-#include "geo.h"
+#include "util/geo.h"
 #include "util/util.h"
 
 class Entity {

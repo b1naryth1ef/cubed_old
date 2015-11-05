@@ -124,7 +124,7 @@ class LoginServer {
 
             if (r.code != 200) {
                 ERROR("Failed to create an account %s", this->url.c_str());
-                return false;
+                return "";
             }
 
             rapidjson::Document d;
@@ -146,7 +146,7 @@ class LoginServer {
 
             unsigned long int sec = time(NULL);
             char payload[24];
-            sprintf(payload, "%Li", sec);
+            sprintf(payload, "%lu", sec);
 
             std::string encrypted = kp.encrypt(payload, nonce, this->public_key);
             std::string encrypted_s = base64_encode(

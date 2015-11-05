@@ -1,13 +1,13 @@
 syntax = "proto3";
-package cubedworld;
-
-message BlockTypeExtra {
-    bool persists = 1;
-    string owner = 2;
-}
+package protoworld;
 
 message Point {
     float x = 1;
     float y = 2;
     float z = 3;
 }
+
+message Chunk {
+  Point pos = 1;
+}
+
