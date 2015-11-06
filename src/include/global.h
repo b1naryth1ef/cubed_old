@@ -12,6 +12,8 @@
 #include <functional>
 #include <unordered_map>
 #include <sstream>
+#include <cstdint>
+#include <cmath>
 
 #include <string.h>
 #include <stdarg.h>

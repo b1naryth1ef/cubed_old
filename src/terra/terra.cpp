@@ -9,9 +9,8 @@ Block::Block(World *world, BlockType* type, Point p) {
     this->pos = p;
 }
 
-World::World(std::string path, BlockTypeCache* types) {
+World::World(std::string path) {
     this->path = path;
-    this->types = types;
     this->gen = new FlatGenerator("seed", this);
 }
 
@@ -91,10 +90,18 @@ void World::open() {
     std::string dbpath = ioutil::join(path, "blocks.db");
     rocksdb::Options options;
     options.create_if_missing = true;
-    auto status = rocksdb::DB::Open(options, dbpath, &this->block_db);
+    auto status = rocksdb::DB::Open(options, dbpath, &this->db);
 
     if (!status.ok()) {
         throw Exception("Failed to load blocks database for world");
+    }
+
+    // Make sure we the type ID incrementer is set
+    std::string blocktypeid;
+    status = this->db->Get(rocksdb::ReadOptions(), "meta:blocktypeid", &blocktypeid);
+
+    if (!status.ok()) {
+        this->db->Put(rocksdb::WriteOptions(), "meta:blocktypeid", "0");
     }
 }
 
@@ -123,16 +130,17 @@ void World::close() {
     flock(fileno(fp), LOCK_UN);
     fclose(fp);
 
-    DEBUG("Closing blocks db...");
-    delete(block_db);
+    DEBUG("Closing world db...");
+    delete(db);
 }
 
 Block* World::create_block(Point p, std::string type) {
-    if (!this->types->count(type)) {
+    if (!this->types.count(type)) {
+        WARN("someone tried to create a block with an invalid type of %s", type.c_str());
         return nullptr;
     }
 
-    return World::create_block(p, this->types->at(type));
+    return World::create_block(p, this->types.at(type));
 }
 
 Block* World::create_block(Point p, BlockType* type) {
@@ -141,41 +149,106 @@ Block* World::create_block(Point p, BlockType* type) {
 
 Block* World::get_block(Point p) {
     std::string type;
-    auto status = this->block_db->Get(rocksdb::ReadOptions(), Block::key(p), &type);
+    auto status = this->db->Get(rocksdb::ReadOptions(), Block::key(p), &type);
 
+    // If the block isn't in the database, lets assume its air
     if (!status.ok() && status.code() == 1) {
+        return this->create_block(p, "base:air");
+    }
+
+    if (!this->types.count(type)) {
         return nullptr;
     }
 
-    if (!this->types->count(type)) {
-        return nullptr;
-    }
-
-    return new Block(this, this->types->at(type), p);
+    return new Block(this, this->types.at(type), p);
 }
 
 void World::save_block(Block *blk) {
-    auto status = this->block_db->Put(rocksdb::WriteOptions(), Block::key(blk->pos), blk->type->name);
+    if (blk == nullptr) {
+        throw Exception("Cannot save_block on null block");
+    }
+
+    uint32_t type_id = getBlockTypeID(blk->type);
+
+    // We don't save air blocks
+    if (type_id == 0) {
+        return;
+    }
+
+    auto status = this->db->Put(rocksdb::WriteOptions(), Block::key(blk->pos), blk->type->name);
     assert(status.ok());
 }
 
 std::string Block::key(Point p) {
-    char buffer[256];
+    char buffer[1024];
     sprintf(buffer, "block:%0.4f:%0.4f:%0.4f", p.x, p.y, p.z);
     return std::string(buffer);
 }
 
 void World::generateInitialWorld() {
+    // Generate 16x16
     BoundingBox b = BoundingBox(Point(-256, 0, -256), Point(256, 256, 256));
     this->gen->generate_area(b);
 
-    rocksdb::Iterator* it = this->block_db->NewIterator(rocksdb::ReadOptions());
+    rocksdb::Iterator* it = this->db->NewIterator(rocksdb::ReadOptions());
     int c = 0;
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         c++;
     }
     delete it;
     INFO("total: %i", c);
+}
+
+uint32_t World::getNextBlockTypeID() {
+    uint32_t type_id;
+    std::string buffer;
+    auto status = this->db->Get(rocksdb::ReadOptions(), "meta:blocktypeid", &buffer);
+
+    if (!status.ok()) {
+        throw Exception("failed to getNextBlockTypeID");
+    }
+
+    size_t size;
+    type_id = std::stoi(buffer, &size) + 1;
+
+    status = this->db->Put(rocksdb::WriteOptions(), "meta:blocktypeid", std::to_string(type_id));
+    assert(status.ok());
+
+    return type_id;
+}
+
+uint32_t World::getBlockTypeID(BlockType *type) {
+    return this->block_type_mapping[type->name];
+}
+
+// TODO: ensure single threaded
+void World::addBlockType(BlockType *type) {
+    uint32_t type_id;
+
+    if (this->types.count(type->name)) {
+        WARN("World::addBlockType replacing type %s", type->name.c_str());
+    }
+
+    std::string type_id_buffer;
+    auto status = this->db->Get(rocksdb::ReadOptions(), type->key(), &type_id_buffer);
+
+    if (status.ok()) {
+        size_t size;
+        type_id = std::stoi(type_id_buffer, &size);
+    } else {
+        if (type->name == "base:air") {
+            type_id = 0;
+        } else {
+            type_id = this->getNextBlockTypeID();
+            status = this->db->Put(rocksdb::WriteOptions(), type->key(), std::to_string(type_id));
+            assert(status.ok());
+        }
+    }
+
+    INFO("Added block type %s with id %i", type->name.c_str(), type_id);
+
+    this->block_type_mapping[type->name] = type_id;
+    this->types[type->name] = type;
 }
 
 }

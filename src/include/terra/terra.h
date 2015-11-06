@@ -48,24 +48,32 @@ class World {
         FILE *fp;
 
     public:
-        rocksdb::DB *block_db;
+        rocksdb::DB *db;
         std::string path;
         std::string name;
-        unsigned short version;
+        uint16_t version;
 
         void open();
         void dump();
         void close();
 
+        // Map block type names to id's
+        std::map<std::string, uint32_t> block_type_mapping;
+
         WorldGenerator *gen;
-        BlockTypeCache *types;
+        BlockTypeCache types;
 
         BlockCache blocks;
         std::vector<Biome *> biomes;
 
-        World(std::string, BlockTypeCache*);
+        World(std::string);
 
         void generateInitialWorld();
+
+        // Block types
+        uint32_t getNextBlockTypeID();
+        uint32_t getBlockTypeID(BlockType*);
+        void addBlockType(BlockType*);
 
         // Block based operations
         Block *get_block(Point);

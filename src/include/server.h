@@ -37,7 +37,7 @@ class Server {
         std::map<std::string, Terra::World*> worlds;
 
         // Holds all registered block typeis
-        Terra::BlockTypeCache *types;
+        Terra::BlockTypeCache types;
 
         // A mapping of connected clients
         std::mutex clients_mutex;

@@ -22,6 +22,12 @@ class BlockType {
 
         // True if can be caught on fire
         virtual bool isFlammable(Block *) = 0;
+
+        std::string key() {
+           char buffer[2048];
+           sprintf(buffer, "type:%s", this->name.c_str());
+           return std::string(buffer);
+        }
 };
 
 class StaticBlockType : public BlockType {

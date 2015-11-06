@@ -44,15 +44,12 @@ Server::Server() {
     this->sv_tickrate->set(this->config.tickrate);
     this->sv_name->set(this->config.name);
 
-    // Create a type cache
-    this->types = new Terra::BlockTypeCache;
-
     // Load the base types
     this->loadBaseTypes();
 
     // Load the worlds we need
     for (auto world_name : this->config.worlds) {
-        Terra::World *w = new Terra::World(world_name, this->types);
+        Terra::World *w = new Terra::World(world_name);
         w->open();
         this->addWorld(w);
     }
@@ -162,13 +159,21 @@ void Server::addWorld(Terra::World *w) {
         throw Exception("Failed to add world to server, already exists!");
     }
 
+    // Copy the types over
+    for (auto type : this->types) {
+        w->addBlockType(type.second);
+    }
+
     auto blk = w->get_block(Point(0, 0, 0));
-    if (blk == nullptr) {
+
+    // TODO: This sucks that we have to have a block at 0,0,0 AND that we use the static string :/
+    if (blk == nullptr || blk->type->name == "base:air") {
         INFO("We haven't loaded this world before, generating land...");
         w->generateInitialWorld();
     } else {
         INFO("World has been loaded before...");
     }
+
     this->worlds[w->name] = w;
 
     // TODO: Worlds should have their own update threads, we need to spawn
@@ -340,19 +345,24 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
 }
 
 void Server::addBlockType(Terra::BlockType *type) {
-    if (this->types->count(type->name)) {
+    if (this->types.count(type->name)) {
         WARN("addBlockType replacing type %s", type->name.c_str());
     }
 
-    (*this->types)[type->name] = type;
+    this->types[type->name] = type;
+
+    // For each world,
+    for (auto world : this->worlds) {
+        world.second->addBlockType(type);
+    }
 }
 
 void Server::rmvBlockType(std::string type) {
-    this->types->erase(type);
+    this->types.erase(type);
 }
 
 Terra::BlockType* Server::getBlockType(std::string type) {
-    return (*this->types)[type];
+    return this->types[type];
 }
 
 void Server::loadBaseTypes() {

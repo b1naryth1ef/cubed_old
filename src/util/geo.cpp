@@ -2,7 +2,7 @@
 
 #include "util/geo.h"
 
-Point::Point(float x, float y, float z) {
+Point::Point(double x, double y, double z) {
     this->x = x;
     this->y = y;
     this->z = z;
@@ -52,3 +52,10 @@ bool BoundingBox::contains(Point p) {
 bool BoundingBox::contains(BoundingBox other) {
     return (this->contains(other.min) && this->contains(other.max));
 }
+
+uint64_t BoundingBox::size() {
+    return ((max.x - min.x) *
+            (max.y - min.y) *
+            (max.z - min.z));
+}
+
