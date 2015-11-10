@@ -1,13 +1,17 @@
 #pragma once
 
+#include "net/util.h"
+#include "net/tcp.h"
+
 #include "util/util.h"
 #include "util/crypto.h"
 
 #include "global.h"
 #include "world.h"
-#include "net.h"
 #include "renderer.h"
 #include "loginserver.h"
+
+#include <muduo/net/EventLoop.h>
 
 class ClientConfig {
     public:
@@ -24,26 +28,27 @@ class Client {
         int tick_rate;
         int fps_rate;
 
+        // Networking event loop
+        muduo::net::EventLoop *loop;
+
         // The login-server UID for this user
         std::string login_uid;
 
         KeyPair keypair = KeyPair("ckeys");
         KeyPair *serv_kp;
 
-        // Networking
-        std::string remote_host;
-        short remote_port;
-
         // ClientWorld *world;
         ClientConfig config;
         LoginServer *loginserver;
-        TCPClient *tcpcli;
+        // TCPClient *tcpcli;
+        Net::TCPConnection *tcp;
 
         Window *main_window;
 
         int session;
 
         Client() {
+            this->loop = new muduo::net::EventLoop;
             tick_rate = 64;
             fps_rate = 120;
         };
@@ -52,8 +57,11 @@ class Client {
             this->shutdown();
             // delete(this->world);
             delete(this->loginserver);
-            delete(this->tcpcli);
+            // delete(this->tcpcli);
             delete(this->main_window);
+
+            delete(this->loop);
+            delete(this->tcp);
         }
 
         bool onConnectionData();

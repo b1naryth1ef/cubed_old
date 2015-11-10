@@ -1,17 +1,48 @@
 #pragma once
 
 #include "global.h"
-#include "net.h"
+
+#include <muduo/net/EventLoop.h>
+
+// #include "net.h"
 #include "cvar.h"
 #include "mod.h"
 #include "db.h"
 #include "loginserver.h"
+
+#include "net/tcp.h"
 
 #include "terra/terra.h"
 #include "terra/blocktype.h"
 
 #include "util/util.h"
 #include "util/crypto.h"
+
+enum RemoteClientState {
+    REMOTE_STATE_NEW,
+    REMOTE_STATE_HANDSHAKE,
+    REMOTE_STATE_CONNECTED
+};
+
+enum DisconnectReason {
+    DISCONNECT_GENERIC,
+};
+
+class Server;
+
+// Represents a remote client playing on the server
+class RemoteClient {
+    public:
+        RemoteClient(uint16_t, Net::TCPServerClient*, Server*);
+
+        uint16_t id;
+        RemoteClientState state = REMOTE_STATE_NEW;
+        Net::TCPServerClient *client;
+        Server *server;
+
+        void parseData(std::string data);
+        void disconnect(DisconnectReason, const std::string);
+};
 
 class ServerConfig {
     public:
@@ -36,7 +67,7 @@ class Server {
         // This holds all the worlds loaded by the server
         std::map<std::string, Terra::World*> worlds;
 
-        // Holds all registered block typeis
+        // Holds all registered block types
         Terra::BlockTypeCache types;
 
         // A mapping of connected clients
@@ -52,8 +83,11 @@ class Server {
         // Whether the server is active
         bool active;
 
+        // Networking event loop
+        muduo::net::EventLoop *loop;
+
         // The TCP server
-        TCPServer *tcps;
+        Net::TCPServer *tcps;
 
         // The servers keypair
         KeyPair keypair = KeyPair("keys");
@@ -117,13 +151,5 @@ class Server {
         void rmvBlockType(std::string);
         Terra::BlockType* getBlockType(std::string);
 
-        // Hooks for the TCP-server
-        bool onTCPConnectionClose(TCPRemoteClient *c);
-        bool onTCPConnectionOpen(TCPRemoteClient *c);
-        bool onTCPConnectionData(TCPRemoteClient *c);
-
-        // Hooks for packets
-        void handlePacket(cubednet::Packet *pk, RemoteClient *c);
-        void handlePacketHandshake(cubednet::PacketHandshake, RemoteClient *c);
-        void handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c);
+        void onTCPEvent(Net::TCPEvent*);
 };

@@ -3,20 +3,7 @@
 #include "client.h"
 
 void Client::connect(std::string addr) {
-    std::vector<std::string> arr = splitString(addr, ':');
-
-    if (arr.size() == 0) {
-        throw Exception("Invalid Host String!");
-    }
-
-    if (arr.size() >= 1) {
-        this->remote_host = arr[0];
-    }
-
-    if (arr.size() == 2) {
-        std::string::size_type sz;
-        this->remote_port = (short) std::stoi(arr[1], &sz);
-    }
+    // this->remote(addr);
 
     // Setup data directory
     ioutil::setupDataDirectory();
@@ -25,7 +12,7 @@ void Client::connect(std::string addr) {
     this->config.load();
 
     // Load loginserver and validate it
-    this->loginserver = new LoginServer(this->config.login_server);
+    // this->loginserver = new LoginServer(this->config.login_server);
 
     // if (this->keypair.empty) {
     //     INFO("Generating new c keypair");
@@ -33,18 +20,23 @@ void Client::connect(std::string addr) {
     //     this->keypair.save("keys");
     // }
 
-    DEBUG("Client has host `%s` and port `%d`", this->remote_host.c_str(), this->remote_port);
-    this->tcpcli = new TCPClient(this->remote_host, this->remote_port);
-    this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
-    this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
-    this->tcpcli->onConnectionOpen = std::bind(&Client::onConnectionOpen, this);
-    this->tcpcli->conn();
+    Net::ConnString cs = Net::ConnString(addr);
+
+    DEBUG("Client attempting connection to %s", cs.toString().c_str());
+    this->tcp = new Net::TCPConnection(this->loop, cs);
+    // this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
+    // this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
+    // this->tcpcli->onConnectionOpen = std::bind(&Client::onConnectionOpen, this);
+    // this->tcpcli->conn();
+    this->tcp->connect();
 }
 
 void Client::run() {
     this->active = true;
     this->connect("127.0.0.1:6060");
-    this->main_loop();
+    this->loop->loop();
+    // TODO: start thread
+    // this->main_loop();
 }
 
 void Client::main_loop() {
@@ -94,6 +86,7 @@ void Client::shutdown() {
 }
 
 bool Client::onConnectionData() {
+    /**
     if (!this->tcpcli->buffer.size()) {
         return true;
     }
@@ -108,6 +101,7 @@ bool Client::onConnectionData() {
     this->handlePacket(packet);
 
     DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
+    **/
 }
 
 bool Client::onConnectionClose() {
@@ -115,7 +109,7 @@ bool Client::onConnectionClose() {
 }
 
 bool Client::onConnectionOpen() {
-    cubednet::PacketStatusRequest pksr;
+    /*cubednet::PacketStatusRequest pksr;
 
     unsigned char junk[STATUS_JUNK_DATA_SIZE];
     randombytes_buf(junk, sizeof junk);
@@ -124,7 +118,7 @@ bool Client::onConnectionOpen() {
     // TODO: track state
     pksr.set_a1(randombytes_uniform(MAX_UINT32));
     pksr.set_a2(randombytes_uniform(MAX_UINT32));
-
+    */
 
     // cubednet::PacketHandshake pk;
     // pk.set_version(CUBED_VERSION);
@@ -162,6 +156,7 @@ bool Client::onConnectionOpen() {
 }
 
 void Client::handlePacket(cubednet::Packet *pk) {
+    /*
     std::string data;
 
     if (pk->nonce() != "") {
@@ -185,6 +180,7 @@ void Client::handlePacket(cubednet::Packet *pk) {
             this->handlePacketStatusResponse(&pkh);
         }
     }
+    */
 }
 
 void Client::handlePacketInit(cubednet::PacketInit *pk) {

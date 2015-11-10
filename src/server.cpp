@@ -61,14 +61,13 @@ Server::Server() {
         this->dex.loadFromPath(mod_name);
     }
 
+    // Create a new networking event loop
+    this->loop = new muduo::net::EventLoop();
+
     // Create a new TCP server, which will be the main entry point for shit
-    this->tcps = new TCPServer(this->config.host_name, this->config.host_port);
-    this->tcps->onConnectionOpen = std::bind(&Server::onTCPConnectionOpen, this,
-        std::placeholders::_1);
-    this->tcps->onConnectionClose = std::bind(&Server::onTCPConnectionClose, this,
-        std::placeholders::_1);
-    this->tcps->onConnectionData = std::bind(&Server::onTCPConnectionData, this,
-        std::placeholders::_1);
+    this->tcps = new Net::TCPServer(this->loop, Net::ConnString(this->config.host_name, this->config.host_port));
+    this->tcps->addEventCallback(std::bind(&Server::onTCPEvent, this, std::placeholders::_1));
+    this->tcps->start();
 }
 
 Server::~Server() {
@@ -93,6 +92,7 @@ void Server::shutdown() {
 void Server::serveForever() {
     this->active = true;
     this->main_thread = std::thread(&Server::mainLoop, this);
+    this->loop->loop();
 }
 
 /*
@@ -114,6 +114,8 @@ void Server::mainLoop() {
 
 void Server::tick() {
     this->clients_mutex.lock();
+
+    /*
     for (auto c : this->clients) {
         if (c.second->packet_buffer.size()) {
             DEBUG("Parsing one packet...");
@@ -123,6 +125,7 @@ void Server::tick() {
             delete(p);
         }
     }
+    */
     this->clients_mutex.unlock();
 
     for (auto w : this->worlds) {
@@ -221,6 +224,16 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
     return false;
 };
 
+void Server::onTCPEvent(Net::TCPEvent *event) {
+    switch (event->type) {
+        case Net::TCP_CONNECT:
+        case Net::TCP_DISCONNECT:
+        case Net::TCP_MESSAGE:
+            INFO("something something tcp");
+    }
+}
+
+/**
 bool Server::onTCPConnectionOpen(TCPRemoteClient *c) {
     DEBUG("Adding TCPClient...");
     RemoteClient *rc = new RemoteClient();
@@ -251,15 +264,20 @@ bool Server::onTCPConnectionData(TCPRemoteClient *c) {
     this->clients[c->id]->tryParse();
     return true;
 }
+**/
 
 ushort Server::newClientID() {
+    /*
     while (this->clients[client_id_inc]) {
         client_id_inc++;
     }
 
     return client_id_inc;
+    */
+    return 0;
 }
 
+/*
 void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
     std::string data;
 
@@ -287,9 +305,10 @@ void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
             break;
         }
     }
-
 }
+*/
 
+/*
 void Server::handlePacketHandshake(cubednet::PacketHandshake pk, RemoteClient *c) {
     DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
     if (pk.version() != CUBED_VERSION) {
@@ -343,7 +362,7 @@ void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteC
 
     c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
 }
-
+*/
 void Server::addBlockType(Terra::BlockType *type) {
     if (this->types.count(type->name)) {
         WARN("addBlockType replacing type %s", type->name.c_str());
@@ -369,3 +388,28 @@ void Server::loadBaseTypes() {
     this->addBlockType(new Terra::AirType());
     this->addBlockType(new Terra::BedRockType());
 }
+
+RemoteClient::RemoteClient(uint16_t id, Net::TCPServerClient *client, Server *server) {
+    this->id = id;
+    this->client = client;
+    this->server = server;
+}
+
+void RemoteClient::parseData(std::string data) {
+    cubednet::Packet *packet = new cubednet::Packet;
+
+    // Attempt to parse the packet
+    if (!packet->ParseFromArray(&data[0], data.size())) {
+        WARN("Failed to parse data");
+        return;
+    }
+
+    DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
+    // TODO: dispatch packet
+}
+
+void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {
+
+}
+
+

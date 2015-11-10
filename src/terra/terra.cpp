@@ -40,6 +40,7 @@ void World::open() {
 
         this->name = "world";
         this->version = CURRENT_WORLD_VERSION;
+        this->seed = "testseed";
         this->dump();
     } else {
         INFO("Loading world file at %s", path.c_str());
@@ -75,6 +76,7 @@ void World::open() {
             d.ParseStream(is);
             this->name = d["name"].GetString();
             this->version = (unsigned short) d["version"].GetInt();
+            this->seed = d["seed"].GetString();
             INFO("Loaded world %s version %i", name.c_str(), version);
         } catch (std::string e) {
             ERROR("Failed to load world info file: %s", e.c_str());
@@ -113,6 +115,11 @@ void World::dump() {
     Value name;
     name.SetString(this->name.c_str(), this->name.size(), allocator);
     d.AddMember("name", name, allocator);
+
+    Value seed;
+    seed.SetString(this->seed.c_str(), this->seed.size(), allocator);
+    d.AddMember("seed", seed, allocator);
+
     d.AddMember("version", Value((int) this->version).Move(), allocator);
 
     char writeBuffer[1024];

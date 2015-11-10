@@ -5,6 +5,7 @@
 #include <fstream>
 #include <exception>
 #include <map>
+#include <set>
 #include <mutex>
 #include <thread>
 #include <chrono>

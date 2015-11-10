@@ -1,6 +1,8 @@
 project(cubed)
 cmake_minimum_required (VERSION 3.2)
 
+# find_package (Threads)
+
 # Set git hash
 execute_process(
   COMMAND git rev-parse HEAD
@@ -14,7 +16,7 @@ if (NOT (GIT_EXECUTED EQUAL 0))
 endif()
 
 # C++11
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
 
 # Protobuf
 aux_source_directory(proto/gen PB_SOURCES)
@@ -30,4 +32,4 @@ FILE(GLOB_RECURSE CORE_SOURCES src/*.cpp)
 
 message(STATUS "${CORE_SOURCES} ${PB_SOURCES}")
 add_executable(cubed ${CORE_SOURCES})
-target_link_libraries(cubed sqlite3 lua dl protobuf pthread sodium SDL2 GL curl proto rocksdb)
+target_link_libraries(cubed sqlite3 lua dl protobuf sodium SDL2 GL curl proto rocksdb uv muduo_net muduo_base)

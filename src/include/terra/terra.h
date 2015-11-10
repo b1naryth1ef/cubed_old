@@ -52,6 +52,7 @@ class World {
         std::string path;
         std::string name;
         uint16_t version;
+        std::string seed;
 
         void open();
         void dump();
