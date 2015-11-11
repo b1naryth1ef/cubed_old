@@ -44,7 +44,6 @@ struct ConnString {
         sprintf(&buffer[0], "%s:%i", this->host.c_str(), this->port);
         return std::string(buffer);
     }
-
 };
 
 }

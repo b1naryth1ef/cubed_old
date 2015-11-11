@@ -4,12 +4,11 @@
 #include "net/tcp.h"
 
 #include "util/util.h"
-#include "util/crypto.h"
 
 #include "global.h"
-#include "world.h"
 #include "renderer.h"
-#include "loginserver.h"
+
+#include "packet.pb.h"
 
 #include <muduo/net/EventLoop.h>
 
@@ -31,19 +30,14 @@ class Client {
         // Networking event loop
         muduo::net::EventLoop *loop;
 
-        // The login-server UID for this user
-        std::string login_uid;
-
-        KeyPair keypair = KeyPair("ckeys");
-        KeyPair *serv_kp;
+        // KeyPair keypair = KeyPair("ckeys");
+        // KeyPair *serv_kp;
 
         // ClientWorld *world;
         ClientConfig config;
-        LoginServer *loginserver;
-        // TCPClient *tcpcli;
         Net::TCPConnection *tcp;
 
-        Window *main_window;
+        Window *main_window = nullptr;
 
         int session;
 
@@ -56,21 +50,25 @@ class Client {
         ~Client() {
             this->shutdown();
             // delete(this->world);
-            delete(this->loginserver);
             // delete(this->tcpcli);
-            delete(this->main_window);
+
+            if (this->main_window != nullptr) {
+                delete(this->main_window);
+            }
 
             delete(this->loop);
             delete(this->tcp);
         }
 
-        bool onConnectionData();
-        bool onConnectionClose();
-        bool onConnectionOpen();
+        void onTCPEvent(Net::TCPEvent&);
 
-        void handlePacket(cubednet::Packet *pk);
-        void handlePacketInit(cubednet::PacketInit *pk);
-        void handlePacketStatusResponse(cubednet::PacketStatusResponse *pk);
+        void sendPacket(ProtoNet::PacketType, google::protobuf::Message*);
+
+        // void handlePacket(ProtoNet::Packet *pk);
+        // void handlePacketInit(ProtoNet::PacketInit *pk);
+        // void handlePacketStatusResponse(ProtoNet::PacketStatusResponse *pk);
+
+        void sendBeginHandshake();
 
         bool setup();
         void run();

@@ -24,6 +24,7 @@ void Client::connect(std::string addr) {
 
     DEBUG("Client attempting connection to %s", cs.toString().c_str());
     this->tcp = new Net::TCPConnection(this->loop, cs);
+    this->tcp->addEventCallback(std::bind(&Client::onTCPEvent, this, std::placeholders::_1));
     // this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
     // this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
     // this->tcpcli->onConnectionOpen = std::bind(&Client::onConnectionOpen, this);
@@ -82,10 +83,9 @@ void Client::shutdown() {
     }
 
     SDL_Quit();
-    delete(this->main_window);
 }
 
-bool Client::onConnectionData() {
+// bool Client::onConnectionData() {
     /**
     if (!this->tcpcli->buffer.size()) {
         return true;
@@ -102,13 +102,47 @@ bool Client::onConnectionData() {
 
     DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
     **/
+// }
+
+
+void Client::onTCPEvent(Net::TCPEvent& event) {
+    switch (event.type) {
+        case Net::TCP_CONNECT:
+            INFO("Client TCP socket is connected. Sending handshake...");
+            this->sendBeginHandshake();
+            break;
+        case Net::TCP_DISCONNECT:
+            INFO("Client TCP socket is disconnected");
+            break;
+        case Net::TCP_MESSAGE:
+            break;
+    }
 }
 
-bool Client::onConnectionClose() {
-    DEBUG("Connection closed!");
+void Client::sendPacket(ProtoNet::PacketType type, google::protobuf::Message *message) {
+    std::string headerBuff, baseBuff;
+    ProtoNet::Packet packet;
+
+    // First, serialize the inner packet
+    message->SerializeToString(&baseBuff);
+
+    packet.set_type(type);
+    packet.set_data(baseBuff);
+    packet.SerializeToString(&headerBuff);
+
+    this->tcp->send(headerBuff);
 }
 
-bool Client::onConnectionOpen() {
+void Client::sendBeginHandshake() {
+    ProtoNet::PacketBeginHandshake handshake;
+
+    handshake.set_username("test");
+    handshake.set_version(CUBED_VERSION);
+
+    this->sendPacket(ProtoNet::BeginHandshake, &handshake);
+}
+
+// bool Client::onConnectionOpen() {
     /*cubednet::PacketStatusRequest pksr;
 
     unsigned char junk[STATUS_JUNK_DATA_SIZE];
@@ -153,9 +187,9 @@ bool Client::onConnectionOpen() {
 
     // DEBUG("Sending handshake packet...");
     // this->tcpcli->send_packet(PACKET_HANDSHAKE, &pk);
-}
+// }
 
-void Client::handlePacket(cubednet::Packet *pk) {
+// void Client::handlePacket(cubednet::Packet *pk) {
     /*
     std::string data;
 
@@ -181,15 +215,7 @@ void Client::handlePacket(cubednet::Packet *pk) {
         }
     }
     */
-}
-
-void Client::handlePacketInit(cubednet::PacketInit *pk) {
-
-}
-
-void Client::handlePacketStatusResponse(cubednet::PacketStatusResponse *pk) {
-
-}
+// }
 
 
 void ClientConfig::load() {

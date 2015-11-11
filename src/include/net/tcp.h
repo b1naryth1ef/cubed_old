@@ -14,6 +14,8 @@
 namespace Net {
 
 class TCPServerClient;
+class TCPServer;
+class TCPConnection;
 
 enum TCPEventType {
     TCP_CONNECT,
@@ -24,35 +26,74 @@ enum TCPEventType {
 class TCPEvent {
     public:
         TCPEventType type;
+
+        TCPServer *server;
         TCPServerClient *client;
+        TCPConnection *conn;
 
         muduo::net::Buffer *buffer;
         muduo::Timestamp timestamp;
 
-        TCPEvent(TCPEventType type, TCPServerClient *client) {
+        TCPEvent(TCPEventType type) {
             this->type = type;
-            this->client = client;
         }
 
-        TCPEvent(TCPEventType type, TCPServerClient *client, muduo::net::Buffer *buffer, muduo::Timestamp ts) {
-            this->type = type;
+        TCPEvent& setServer(TCPServer *server) {
+            this->server = server;
+            return *this;
+        }
+
+        TCPEvent& setClient(TCPServerClient *client) {
             this->client = client;
+            return *this;
+        }
+
+        TCPEvent& setConn(TCPConnection *conn) {
+            this->conn = conn;
+            return *this;
+        }
+
+        TCPEvent& setBuffer(muduo::net::Buffer *buffer) {
             this->buffer = buffer;
+            return *this;
+        }
+
+        TCPEvent& setTimestamp(muduo::Timestamp ts) {
             this->timestamp = ts;
+            return *this;
+        }
+};
+
+typedef std::function<void (TCPEvent&)> TCPHook;
+
+class TCPEventDispatcher {
+    private:
+        TCPHook onEvent;
+
+    public:
+        void addEventCallback(TCPHook callback) {
+            this->onEvent = callback;
+        }
+
+        void triggerEvent(TCPEvent &event) {
+            if (this->onEvent != nullptr) {
+                this->onEvent(event);
+            }
+        }
+
+        bool hasEventHandler() {
+            return (onEvent != nullptr);
         }
 };
 
 
-typedef std::function<void (TCPEvent*)> TCPServerHook;
 
-class TCPServer {
+class TCPServer : public TCPEventDispatcher {
     private:
         muduo::net::EventLoop *loop;
         muduo::net::TcpServer *server;
 
         std::set<TCPServerClient *> clients;
-
-        TCPServerHook onEvent;
 
     public:
         TCPServer(muduo::net::EventLoop*, ConnString);
@@ -65,12 +106,9 @@ class TCPServer {
         void addClient(TCPServerClient*);
         void rmvClient(TCPServerClient*);
         TCPServerClient *getClient(const muduo::net::TcpConnectionPtr&);
-
-        void addEventCallback(TCPServerHook callback);
-        void triggerEvent(TCPEvent*);
 };
 
-class TCPServerClient {
+class TCPServerClient : public TCPEventDispatcher {
     private:
         TCPServer *server;
 
@@ -85,7 +123,7 @@ class TCPServerClient {
             muduo::Timestamp);
 };
 
-class TCPConnection {
+class TCPConnection : public TCPEventDispatcher {
     private:
         muduo::net::EventLoop *loop;
         muduo::net::TcpClient *client;
@@ -101,6 +139,8 @@ class TCPConnection {
             muduo::Timestamp);
 
         void connect();
+
+        void send(std::string);
 };
 
 }

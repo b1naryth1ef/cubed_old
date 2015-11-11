@@ -8,7 +8,8 @@
 #include "cvar.h"
 #include "mod.h"
 #include "db.h"
-#include "loginserver.h"
+
+#include "packet.pb.h"
 
 #include "net/tcp.h"
 
@@ -16,7 +17,6 @@
 #include "terra/blocktype.h"
 
 #include "util/util.h"
-#include "util/crypto.h"
 
 enum RemoteClientState {
     REMOTE_STATE_NEW,
@@ -40,7 +40,8 @@ class RemoteClient {
         Net::TCPServerClient *client;
         Server *server;
 
-        void parseData(std::string data);
+        void onTCPEvent(Net::TCPEvent&);
+        void parseData(muduo::string&);
         void disconnect(DisconnectReason, const std::string);
 };
 
@@ -74,9 +75,6 @@ class Server {
         std::mutex clients_mutex;
         std::map<ushort, RemoteClient*> clients;
 
-        // List of all our login servers
-        std::vector<LoginServer*> login_servers;
-
         // The main thread
         std::thread main_thread;
 
@@ -90,7 +88,7 @@ class Server {
         Net::TCPServer *tcps;
 
         // The servers keypair
-        KeyPair keypair = KeyPair("keys");
+        // KeyPair keypair = KeyPair("keys");
 
         // The mod index
         ModDex dex;
@@ -144,12 +142,10 @@ class Server {
         // Generates a new client-id
         ushort newClientID();
 
-        bool verifyLoginServer(std::string&);
-
         // Manage block types
         void addBlockType(Terra::BlockType*);
         void rmvBlockType(std::string);
         Terra::BlockType* getBlockType(std::string);
 
-        void onTCPEvent(Net::TCPEvent*);
+        void onTCPEvent(Net::TCPEvent&);
 };

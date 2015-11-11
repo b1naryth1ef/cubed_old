@@ -16,7 +16,7 @@ TCPServer::TCPServer(muduo::net::EventLoop *loop, ConnString cs) {
 TCPServer::~TCPServer() {}
 
 void TCPServer::start() {
-    if (!this->onEvent) {
+    if (!this->hasEventHandler()) {
         throw Exception("Cannot start TCPServer without an onEvent handler");
     }
 
@@ -30,21 +30,14 @@ void TCPServer::onNewConnection(const muduo::net::TcpConnectionPtr& conn) {
         TCPServerClient* client = new TCPServerClient(this, conn);
         this->addClient(client);
 
-        this->triggerEvent(new TCPEvent(
-            TCP_CONNECT,
-            client
-        ));
+        this->triggerEvent(TCPEvent(TCP_CONNECT).setClient(client));
     } else {
         DEBUG("TCPServer lost connection, passing to event handler");
         TCPServerClient* client = this->getClient(conn);
 
         this->rmvClient(client);
 
-        this->triggerEvent(new TCPEvent(
-            TCP_DISCONNECT,
-            client
-        ));
-
+        this->triggerEvent(TCPEvent(TCP_DISCONNECT).setClient(client));
         delete(client);
     }
 }
@@ -71,15 +64,6 @@ TCPServerClient *TCPServer::getClient(const muduo::net::TcpConnectionPtr &cn) {
     return nullptr;
 }
 
-void TCPServer::addEventCallback(TCPServerHook callback) {
-    this->onEvent = callback;
-}
-
-void TCPServer::triggerEvent(TCPEvent *event) {
-    this->onEvent(event);
-    delete(event);
-}
-
 TCPServerClient::TCPServerClient(TCPServer *server, const muduo::net::TcpConnectionPtr &cn) : conn(cn) {
     this->server = server;
     conn->setMessageCallback(std::bind(&TCPServerClient::onMessage, this,
@@ -89,14 +73,9 @@ TCPServerClient::TCPServerClient(TCPServer *server, const muduo::net::TcpConnect
 }
 
 void TCPServerClient::onMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp ts) {
-    this->server->triggerEvent(new TCPEvent(
-        TCP_MESSAGE,
-        this->server->getClient(conn),
-        buff,
-        ts
-    ));
-    muduo::string msg(buff->retrieveAllAsString());
-    INFO("NEW MESSAGE %s", msg.c_str());
+    TCPEvent event = TCPEvent(TCP_MESSAGE).setClient(this).setServer(this->server).setBuffer(buff).setTimestamp(ts);
+    this->triggerEvent(event);
+    this->server->triggerEvent(event);
 }
 
 TCPConnection::TCPConnection(muduo::net::EventLoop *loop, ConnString cs) : remote(cs) {
@@ -112,16 +91,28 @@ TCPConnection::TCPConnection(muduo::net::EventLoop *loop, ConnString cs) : remot
 }
 
 void TCPConnection::onNewConnection(const muduo::net::TcpConnectionPtr &conn) {
+    if (conn->connected()) {
+        this->triggerEvent(TCPEvent(TCP_CONNECT).setConn(this));
+    } else {
+        this->triggerEvent(TCPEvent(TCP_DISCONNECT).setConn(this));
+    }
     DEBUG("Established connection");
 }
 
 void TCPConnection::onMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp ts) {
+    this->triggerEvent(TCPEvent(TCP_MESSAGE).setConn(this).setBuffer(buff).setTimestamp(ts));
     muduo::string msg(buff->retrieveAllAsString());
     DEBUG("Message %s", msg.c_str());
 }
 
 void TCPConnection::connect() {
     this->client->connect();
+}
+
+void TCPConnection::send(std::string data) {
+    const muduo::net::TcpConnectionPtr ptr = this->client->connection();
+    // muduo::string buff(data);
+    ptr->send(data);
 }
 
 }

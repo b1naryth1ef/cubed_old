@@ -6,9 +6,9 @@
 
 class Window {
     public:
-        SDL_Window *win;
+        SDL_Window *win = nullptr;
+        SDL_Renderer *ren = nullptr;
         SDL_GLContext ctx;
-        SDL_Renderer *ren;
 
         Window(std::string, int, int);
 
@@ -17,9 +17,7 @@ class Window {
                 SDL_DestroyRenderer(this->ren);
             }
 
-            if (this->ctx != nullptr) {
-                SDL_GL_DeleteContext(this->ctx);
-            }
+            SDL_GL_DeleteContext(this->ctx);
 
             if (this->win != nullptr) {
                 SDL_DestroyWindow(this->win);

@@ -9,31 +9,15 @@ Server::Server() {
     init_db_module();
 
     // Load the servers keypairs
-    if (this->keypair.empty) {
+    /*if (this->keypair.empty) {
         INFO("Generating new server keypair");
         this->keypair.generate();
         this->keypair.save("keys");
-    }
+    }*/
 
     // Load the server cvars
     this->loadCvars();
     this->config.load();
-
-    // Load and validate the login servers
-    THREAD([this]() {
-        INFO("Loading all login servers...");
-
-        for (auto &ls : this->config.login_servers) {
-            LoginServer *serv = new LoginServer(ls);
-            if (serv->valid) {
-                this->login_servers.push_back(serv);
-            }
-        }
-
-        if (!this->login_servers.size()) {
-            WARN("No login servers provided, authentication/sessions are disabled!");
-        }
-    });
 
     // Open up the server-db (player storage/etc)
     this->db = new DB("server.db");
@@ -77,10 +61,6 @@ Server::~Server() {
 void Server::shutdown() {
     for (auto v : this->worlds) {
         v.second->close();
-    }
-
-    for (auto v : this->login_servers) {
-        delete(v);
     }
 
     DEBUG("Joining %i thread-pool threads", THREAD_POOL.size());
@@ -209,10 +189,6 @@ void ServerConfig::load() {
         this->worlds.push_back(itr->GetString());
     }
 
-    const Value& logins = d["logins"];
-    for (Value::ConstValueIterator itr = logins.Begin(); itr != logins.End(); ++itr) {
-        this->login_servers.push_back(itr->GetString());
-    }
     const Value& mods = d["mods"];
     for (Value::ConstValueIterator itr = mods.Begin(); itr != mods.End(); ++itr) {
         this->mods.push_back(itr->GetString());
@@ -224,12 +200,15 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
     return false;
 };
 
-void Server::onTCPEvent(Net::TCPEvent *event) {
-    switch (event->type) {
+void Server::onTCPEvent(Net::TCPEvent &event) {
+    switch (event.type) {
         case Net::TCP_CONNECT:
+            this->clients[1] = new RemoteClient(1, event.client, this);
+            break;
         case Net::TCP_DISCONNECT:
+            break;
         case Net::TCP_MESSAGE:
-            INFO("something something tcp");
+            break;
     }
 }
 
@@ -393,19 +372,47 @@ RemoteClient::RemoteClient(uint16_t id, Net::TCPServerClient *client, Server *se
     this->id = id;
     this->client = client;
     this->server = server;
+    this->client->addEventCallback(std::bind(&RemoteClient::onTCPEvent, this, std::placeholders::_1));
 }
 
-void RemoteClient::parseData(std::string data) {
-    cubednet::Packet *packet = new cubednet::Packet;
+void RemoteClient::onTCPEvent(Net::TCPEvent& event) {
+    if (event.type == Net::TCP_MESSAGE) {
+        muduo::string msg(event.buffer->retrieveAllAsString());
+        this->parseData(msg);
+    }
+}
+
+void RemoteClient::parseData(muduo::string& data) {
+    ProtoNet::Packet packet;
 
     // Attempt to parse the packet
-    if (!packet->ParseFromArray(&data[0], data.size())) {
+    if (!packet.ParseFromArray(&data[0], data.size())) {
         WARN("Failed to parse data");
         return;
     }
 
-    DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
-    // TODO: dispatch packet
+    std::string innerBuff = packet.data();
+
+    switch (packet.type()) {
+        case ProtoNet::Invalid: {
+            ERROR("Invalid packet recieved!");
+            break;
+        }
+        case ProtoNet::Error: {
+            ProtoNet::PacketError inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            break;
+        }
+        case ProtoNet::BeginHandshake: {
+            ProtoNet::PacketBeginHandshake inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            break;
+        }
+        default: {
+            DEBUG("PACKET: %i, DATA-SIZE: %i", packet.type(), packet.data().size());
+        }
+    }
+
 }
 
 void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {

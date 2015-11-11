@@ -1,56 +1,82 @@
 syntax = "proto3";
 
-package cubednet;
+package ProtoNet;
 
-message SignedMessage {
-    bytes data = 1;
-    bytes signature = 2;
+import "world.proto";
+
+enum PacketType {
+  Invalid = 0;
+  Error = 1;
+  BeginHandshake = 2;
+  AcceptHandshake = 3;
+  CompleteHandshake = 4;
+  Being = 5;
+}
+
+enum ErrorType {
+  Generic = 0;
 }
 
 message Packet {
-    uint32 pid = 1;
-    bytes data = 2;
-    bytes nonce = 3;
+  PacketType type = 1;
+  bytes data = 2;
+
+  // Ticket is used for "callback" like requests
+  uint32 ticket = 3;
 }
 
-message ModDef {
-    string name = 1;
-    uint32 version = 2;
-    bool enabled = 3;
+message ISession {
+  string server = 1;
+  bytes session = 2;
 }
 
-// Client -> Server
-message PacketStatusRequest {
-    bytes data = 1;
-    int64 a1 = 2;
-    int64 a2 = 3;
+message PacketError {
+  ErrorType type = 1;
+  string message = 2;
 }
 
-// Server -> Client
-message PacketStatusResponse {
-    string name = 1;
-    string motd = 2;
-    uint32 players = 3;
-    uint32 version = 4;
-    bytes pubkey = 5;
-    SignedMessage data = 6;
+/*
+  This packet sends a small amount of information to the server requesting a new game
+  session be established.
+*/
+message PacketBeginHandshake {
+  // Username is provided for servers that do not require session authentication
+  string username = 1;
+
+  // Current protocol version we are attempting to handshake with
+  uint32 version = 2;
+
+  // Client session
+  ISession session = 3;
 }
 
-// Client -> Server
-message PacketHandshake {
-    uint32 session = 1;
-    string loginserver = 2;
-    uint32 version = 3;
+/*
+  This packet responds to BeginHandshake sending the servers session information, and a new
+  ID for this session.
+*/
+message PacketAcceptHandshake {
+  // A unique ID for this session
+  uint64 id = 1;
 
-    bytes pubkey = 4;
+  // Server session
+  ISession session = 2;
 }
 
-// Server -> Client (enc)
-message PacketInit {
-    uint32 id = 1;
+
+/*
+  Final step in the three-way handshake, client expresses intent to fully join the server.
+*/
+message PacketCompleteHandshake {
+  // TODO: mod information goes here
 }
 
-message PacketDisconnect {
-    uint32 reason = 1;
-    string desc = 2;
+/*
+  Sends intial information required for the client to be part of the server...
+*/
+message PacketBegin {
+  // Send information about the current world
+  world.World world = 1;
+
+  // Send the current location
+  world.Point pos = 2;
 }
