@@ -12,8 +12,17 @@
 
 #include <muduo/net/EventLoop.h>
 
+enum ClientState {
+    CLIENT_INACTIVE,
+    CLIENT_SENT_HANDSHAKE,
+    CLIENT_SENT_COMPLETION,
+    CLIENT_ACTIVE
+};
+
 class ClientConfig {
     public:
+        std::string username;
+
         std::string login_server;
         std::string uid;
         bool auth;
@@ -23,18 +32,22 @@ class ClientConfig {
 
 class Client {
     public:
+        // Represents the current state of the client<->server connection
+        ClientState state = CLIENT_INACTIVE;
+
+        // Our client ID (provided and managed by the server)
+        uint64_t id;
+
+        // Is the rendering (core) loop active?
         bool active;
-        int tick_rate;
-        int fps_rate;
 
         // Networking event loop
         muduo::net::EventLoop *loop;
 
-        // KeyPair keypair = KeyPair("ckeys");
-        // KeyPair *serv_kp;
-
-        // ClientWorld *world;
+        // Config for the client
         ClientConfig config;
+
+        // The core TCP connection
         Net::TCPConnection *tcp;
 
         Window *main_window = nullptr;
@@ -43,8 +56,6 @@ class Client {
 
         Client() {
             this->loop = new muduo::net::EventLoop;
-            tick_rate = 64;
-            fps_rate = 120;
         };
 
         ~Client() {
@@ -60,20 +71,27 @@ class Client {
             delete(this->tcp);
         }
 
+        // Eventing and parsing
         void onTCPEvent(Net::TCPEvent&);
+        void parseData(muduo::string&);
 
+        // Used to send packets to the remote
         void sendPacket(ProtoNet::PacketType, google::protobuf::Message*);
 
-        // void handlePacket(ProtoNet::Packet *pk);
-        // void handlePacketInit(ProtoNet::PacketInit *pk);
-        // void handlePacketStatusResponse(ProtoNet::PacketStatusResponse *pk);
+        // Packet handlers
+        void onPacketError(ProtoNet::PacketError);
+        void onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake);
 
+        // Utility methods for sending data over the wire
         void sendBeginHandshake();
+        void sendCompleteHandshake(std::string);
 
+        // General stateful settings
         bool setup();
         void run();
         void main_loop();
         void shutdown();
 
+        // Connect to a server specified by a hoststring
         void connect(std::string);
 };

@@ -121,6 +121,8 @@ class TCPServerClient : public TCPEventDispatcher {
             const muduo::net::TcpConnectionPtr&,
             muduo::net::Buffer*,
             muduo::Timestamp);
+
+        void send(std::string);
 };
 
 class TCPConnection : public TCPEventDispatcher {

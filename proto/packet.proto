@@ -15,6 +15,9 @@ enum PacketType {
 
 enum ErrorType {
   Generic = 0;
+  InvalidVersion = 1;
+  InvalidUsername = 2;
+  InvalidPassword = 3;
 }
 
 message Packet {
@@ -32,7 +35,7 @@ message ISession {
 
 message PacketError {
   ErrorType type = 1;
-  string message = 2;
+  string msg = 2;
 }
 
 /*
@@ -60,6 +63,9 @@ message PacketAcceptHandshake {
 
   // Server session
   ISession session = 2;
+
+  // Is this server password protected??
+  bool password = 3;
 }
 
 
@@ -67,6 +73,8 @@ message PacketAcceptHandshake {
   Final step in the three-way handshake, client expresses intent to fully join the server.
 */
 message PacketCompleteHandshake {
+  string password = 1;
+
   // TODO: mod information goes here
 }
 

@@ -78,6 +78,10 @@ void TCPServerClient::onMessage(const muduo::net::TcpConnectionPtr &conn, muduo:
     this->server->triggerEvent(event);
 }
 
+void TCPServerClient::send(std::string data) {
+    conn->send(data);
+}
+
 TCPConnection::TCPConnection(muduo::net::EventLoop *loop, ConnString cs) : remote(cs) {
     this->loop = loop;
 
@@ -101,8 +105,6 @@ void TCPConnection::onNewConnection(const muduo::net::TcpConnectionPtr &conn) {
 
 void TCPConnection::onMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp ts) {
     this->triggerEvent(TCPEvent(TCP_MESSAGE).setConn(this).setBuffer(buff).setTimestamp(ts));
-    muduo::string msg(buff->retrieveAllAsString());
-    DEBUG("Message %s", msg.c_str());
 }
 
 void TCPConnection::connect() {

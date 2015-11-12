@@ -3,32 +3,15 @@
 #include "client.h"
 
 void Client::connect(std::string addr) {
-    // this->remote(addr);
-
-    // Setup data directory
-    ioutil::setupDataDirectory();
-
     // Load client configuration
     this->config.load();
 
-    // Load loginserver and validate it
-    // this->loginserver = new LoginServer(this->config.login_server);
-
-    // if (this->keypair.empty) {
-    //     INFO("Generating new c keypair");
-    //     this->keypair.generate();
-    //     this->keypair.save("keys");
-    // }
-
+    // Generate the connection string and attempt the connection
     Net::ConnString cs = Net::ConnString(addr);
 
     DEBUG("Client attempting connection to %s", cs.toString().c_str());
     this->tcp = new Net::TCPConnection(this->loop, cs);
     this->tcp->addEventCallback(std::bind(&Client::onTCPEvent, this, std::placeholders::_1));
-    // this->tcpcli->onConnectionData = std::bind(&Client::onConnectionData, this);
-    // this->tcpcli->onConnectionClose = std::bind(&Client::onConnectionClose, this);
-    // this->tcpcli->onConnectionOpen = std::bind(&Client::onConnectionOpen, this);
-    // this->tcpcli->conn();
     this->tcp->connect();
 }
 
@@ -85,26 +68,6 @@ void Client::shutdown() {
     SDL_Quit();
 }
 
-// bool Client::onConnectionData() {
-    /**
-    if (!this->tcpcli->buffer.size()) {
-        return true;
-    }
-
-    // GC: This is cleaned up in the server parsing loop
-    cubednet::Packet *packet = new cubednet::Packet;
-    if (!packet->ParseFromArray(&this->tcpcli->buffer[0], this->tcpcli->buffer.size())) {
-        WARN("Failed to parse data, assuming we need more...");
-        return true;
-    }
-
-    this->handlePacket(packet);
-
-    DEBUG("PACKET: %i, DATA-SIZE: %i", packet->pid(), packet->data().size());
-    **/
-// }
-
-
 void Client::onTCPEvent(Net::TCPEvent& event) {
     switch (event.type) {
         case Net::TCP_CONNECT:
@@ -115,11 +78,14 @@ void Client::onTCPEvent(Net::TCPEvent& event) {
             INFO("Client TCP socket is disconnected");
             break;
         case Net::TCP_MESSAGE:
+            muduo::string msg(event.buffer->retrieveAllAsString());
+            this->parseData(msg);
             break;
     }
 }
 
 void Client::sendPacket(ProtoNet::PacketType type, google::protobuf::Message *message) {
+    DEBUG("Sending packet %i to server", type);
     std::string headerBuff, baseBuff;
     ProtoNet::Packet packet;
 
@@ -134,94 +100,93 @@ void Client::sendPacket(ProtoNet::PacketType type, google::protobuf::Message *me
 }
 
 void Client::sendBeginHandshake() {
+    // TODO: eventuall we will handle regaining state
+    assert(this->state == CLIENT_INACTIVE);
+
     ProtoNet::PacketBeginHandshake handshake;
 
-    handshake.set_username("test");
+    handshake.set_username(this->config.username);
     handshake.set_version(CUBED_VERSION);
 
     this->sendPacket(ProtoNet::BeginHandshake, &handshake);
+    this->state = CLIENT_SENT_HANDSHAKE;
 }
 
-// bool Client::onConnectionOpen() {
-    /*cubednet::PacketStatusRequest pksr;
+void Client::sendCompleteHandshake(std::string password = "") {
+    assert(this->state == CLIENT_SENT_HANDSHAKE);
 
-    unsigned char junk[STATUS_JUNK_DATA_SIZE];
-    randombytes_buf(junk, sizeof junk);
-    pksr.set_data((const char *) junk);
+    ProtoNet::PacketCompleteHandshake complete;
+    complete.set_password(password);
+    this->sendPacket(ProtoNet::CompleteHandshake, &complete);
+    this->state = CLIENT_SENT_COMPLETION;
+}
 
-    // TODO: track state
-    pksr.set_a1(randombytes_uniform(MAX_UINT32));
-    pksr.set_a2(randombytes_uniform(MAX_UINT32));
-    */
+void Client::parseData(muduo::string& data) {
+    ProtoNet::Packet packet;
 
-    // cubednet::PacketHandshake pk;
-    // pk.set_version(CUBED_VERSION);
-
-    // if (!this->config.auth) {
-    //     INFO("Login Servers are disabled, attempting blank auth.");
-
-    //     if (this->keypair.empty) {
-    //         this->keypair.generate();
-    //     }
-    //     pk.set_session(0);
-    //     pk.set_loginserver("");
-    //     pk.set_pubkey(this->keypair.getPublicKey());
-    // } else {
-    //     INFO("Attempting to authenticate with login server...");
-
-    //     if (this->keypair.empty) {
-    //         DEBUG("Creating a new account...");
-    //         this->login_uid = this->loginserver->createAccount(&this->keypair);
-    //         this->keypair.save("ckeys");
-    //     }
-
-    //     DEBUG("Creating login session...");
-    //     this->login_uid = this->config.uid;
-    //     this->session = this->loginserver->login(this->login_uid, this->keypair);
-    //     pk.set_session(this->session);
-    //     pk.set_loginserver(this->loginserver->url);
-    // }
-
-    // DEBUG("Saving client keypair...");
-    // this->keypair.save(ioutil::join(ioutil::getDataDirectory(), "keys"));
-
-    // DEBUG("Sending handshake packet...");
-    // this->tcpcli->send_packet(PACKET_HANDSHAKE, &pk);
-// }
-
-// void Client::handlePacket(cubednet::Packet *pk) {
-    /*
-    std::string data;
-
-    if (pk->nonce() != "") {
-        data = this->keypair.decrypt(
-            pk->data(),
-            pk->nonce(),
-            (*this->serv_kp));
-    } else {
-        data = pk->data();
+    if (!packet.ParseFromArray(&data[0], data.size())) {
+        WARN("Failed to parse incoming packet: `%s`", data.c_str());
+        return;
     }
 
-    switch (pk->pid()) {
-        case PACKET_INIT: {
-            cubednet::PacketInit pkh;
-            assert(pkh.ParseFromString(data));
-            this->handlePacketInit(&pkh);
+    std::string innerBuff = packet.data();
+
+    switch (packet.type()) {
+        case ProtoNet::Invalid: {
+            ERROR("Invalid packet recieved!");
+            break;
         }
-        case PACKET_STATUS_RESPONSE: {
-            cubednet::PacketStatusResponse pkh;
-            assert(pkh.ParseFromString(data));
-            this->handlePacketStatusResponse(&pkh);
+        case ProtoNet::Error: {
+            ProtoNet::PacketError inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketError(inner);
+            break;
+        }
+        case ProtoNet::AcceptHandshake: {
+            ProtoNet::PacketAcceptHandshake inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketAcceptHandshake(inner);
+            break;
+        }
+        default: {
+            WARN("Recieved unknown packet %i (data-size: %i)", packet.type(), packet.data().size());
         }
     }
-    */
-// }
+}
 
+void Client::onPacketError(ProtoNet::PacketError err) {
+    if (err.type() == ProtoNet::Generic) {
+        ERROR("Recieved generic error from the server: %s", err.msg().c_str());
+        return;
+    }
+
+    ERROR("Recieved error %i from server: %s", err.type(), err.msg().c_str());
+}
+
+void Client::onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake pkt) {
+    std::string password;
+
+    if (this->state != CLIENT_SENT_HANDSHAKE) {
+        throw Exception("Got unexpected PacketAcceptHandshake!");
+    }
+
+    // Save the client ID
+    this->id = pkt.id();
+
+    if (pkt.password()) {
+        // TODO: grab from UI? throw error?
+        password = "test";
+    }
+
+    // Send the end of our three-way handshake
+    this->sendCompleteHandshake(password);
+}
 
 void ClientConfig::load() {
     Document d;
     loadJSONFile("client.json", &d);
 
+    this->username = d["username"].GetString();
     this->login_server = d["login_server"].GetString();
     this->uid = d["uid"].GetString();
     this->auth = d["auth"].GetBool();

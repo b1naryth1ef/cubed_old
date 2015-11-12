@@ -1,4 +1,5 @@
 {
+    "username": "testuser01",
     "login_server": "localhost:5000",
     "uid": "8e04abc7-cb6b-4e79-9389-7d1a958ca209",
     "auth": false

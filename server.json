@@ -1,5 +1,6 @@
 {
     "name": "Cubed Test Server",
+    "password": "",
     "host": {
         "name": "0.0.0.0",
         "port": 6060

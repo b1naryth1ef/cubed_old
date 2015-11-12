@@ -182,7 +182,14 @@ void ServerConfig::load() {
     this->name = d["name"].GetString();
     this->host_name = d["host"]["name"].GetString();
     this->host_port = d["host"]["port"].GetInt();
-    this->tickrate = d["tickrate"].GetInt();
+
+    if (d.HasMember("tickrate")) {
+        this->tickrate = d["tickrate"].GetInt();
+    }
+
+    if (d.HasMember("password")) {
+        this->password = d["password"].GetString();
+    }
 
     const Value& wrlds = d["worlds"];
     for (Value::ConstValueIterator itr = wrlds.Begin(); itr != wrlds.End(); ++itr) {
@@ -203,13 +210,22 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
 void Server::onTCPEvent(Net::TCPEvent &event) {
     switch (event.type) {
         case Net::TCP_CONNECT:
-            this->clients[1] = new RemoteClient(1, event.client, this);
+            this->pending.insert(new RemoteClient(event.client, this));
             break;
         case Net::TCP_DISCONNECT:
             break;
         case Net::TCP_MESSAGE:
             break;
     }
+}
+
+void Server::addClient(RemoteClient *remote) {
+    this->pending.erase(remote);
+
+    this->clients_mutex.lock();
+    remote->id = this->newClientID();
+    this->clients[remote->id] = remote;
+    this->clients_mutex.unlock();
 }
 
 /**
@@ -245,15 +261,12 @@ bool Server::onTCPConnectionData(TCPRemoteClient *c) {
 }
 **/
 
-ushort Server::newClientID() {
-    /*
+uint64_t Server::newClientID() {
     while (this->clients[client_id_inc]) {
         client_id_inc++;
     }
 
     return client_id_inc;
-    */
-    return 0;
 }
 
 /*
@@ -368,8 +381,7 @@ void Server::loadBaseTypes() {
     this->addBlockType(new Terra::BedRockType());
 }
 
-RemoteClient::RemoteClient(uint16_t id, Net::TCPServerClient *client, Server *server) {
-    this->id = id;
+RemoteClient::RemoteClient(Net::TCPServerClient *client, Server *server) {
     this->client = client;
     this->server = server;
     this->client->addEventCallback(std::bind(&RemoteClient::onTCPEvent, this, std::placeholders::_1));
@@ -401,11 +413,19 @@ void RemoteClient::parseData(muduo::string& data) {
         case ProtoNet::Error: {
             ProtoNet::PacketError inner;
             inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketError(inner);
             break;
         }
         case ProtoNet::BeginHandshake: {
             ProtoNet::PacketBeginHandshake inner;
             inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketBeginHandshake(inner);
+            break;
+        }
+        case ProtoNet::CompleteHandshake: {
+            ProtoNet::PacketCompleteHandshake inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketCompleteHandshake(inner);
             break;
         }
         default: {
@@ -413,6 +433,84 @@ void RemoteClient::parseData(muduo::string& data) {
         }
     }
 
+}
+
+void RemoteClient::sendPacket(ProtoNet::PacketType type, google::protobuf::Message *message) {
+    DEBUG("Sending packet %i to remote", type);
+    std::string headerBuff, baseBuff;
+    ProtoNet::Packet packet;
+
+    // First, serialize the inner packet
+    message->SerializeToString(&baseBuff);
+
+    packet.set_type(type);
+    packet.set_data(baseBuff);
+    packet.SerializeToString(&headerBuff);
+
+    this->client->send(headerBuff);
+}
+
+void RemoteClient::sendError(ProtoNet::ErrorType type, std::string msg = "") {
+    ProtoNet::PacketError err;
+    err.set_type(type);
+    err.set_msg(msg);
+    this->sendPacket(ProtoNet::Error, &err);
+}
+
+void RemoteClient::sendAcceptHandshake() {
+    ProtoNet::PacketAcceptHandshake pkt;
+    pkt.set_id(this->id);
+    pkt.set_password((this->server->config.password != ""));
+    this->sendPacket(ProtoNet::AcceptHandshake, &pkt);
+}
+
+void RemoteClient::onPacketError(ProtoNet::PacketError err) {
+    if (err.type() == ProtoNet::Generic) {
+        ERROR("Recieved generic error from the client: %s", err.msg().c_str());
+        return;
+    }
+}
+
+
+void RemoteClient::onPacketBeginHandshake(ProtoNet::PacketBeginHandshake pkt) {
+    if (this->state != REMOTE_STATE_INVALID) {
+        throw Exception("Recieved unexpected PacketBeginhandshake from client");
+    }
+
+    if (pkt.version() != CUBED_VERSION) {
+        char buff[256];
+        sprintf(&buff[0], "Invalid cubed version, expecting %i", CUBED_VERSION);
+        this->sendError(ProtoNet::InvalidVersion, std::string(buff));
+        return;
+    }
+
+    std::string username = pkt.username();
+    if (username.size() > 32 || username.size() < 5) {
+        this->sendError(ProtoNet::InvalidUsername, "Invalid username length");
+        return;
+    }
+
+    // TODO: check we don't already have a client by this username
+
+    // Send accept handshake
+    this->server->addClient(this);
+    this->sendAcceptHandshake();
+    this->state = REMOTE_STATE_HANDSHAKE;
+}
+
+void RemoteClient::onPacketCompleteHandshake(ProtoNet::PacketCompleteHandshake pkt) {
+    if (this->state != REMOTE_STATE_HANDSHAKE) {
+        throw Exception("Recieved unexpected PacketCompleteHandshake from client");
+    }
+
+    if (this->server->config.password != "" && pkt.password() != this->server->config.password) {
+        this->sendError(ProtoNet::InvalidPassword, "Invalid password");
+        return;
+    }
+
+    this->state = REMOTE_STATE_CONNECTED;
+
+    // TODO: send begin state
 }
 
 void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {

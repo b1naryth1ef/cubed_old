@@ -19,7 +19,7 @@
 #include "util/util.h"
 
 enum RemoteClientState {
-    REMOTE_STATE_NEW,
+    REMOTE_STATE_INVALID,
     REMOTE_STATE_HANDSHAKE,
     REMOTE_STATE_CONNECTED
 };
@@ -33,12 +33,29 @@ class Server;
 // Represents a remote client playing on the server
 class RemoteClient {
     public:
-        RemoteClient(uint16_t, Net::TCPServerClient*, Server*);
+        RemoteClient(Net::TCPServerClient*, Server*);
 
-        uint16_t id;
-        RemoteClientState state = REMOTE_STATE_NEW;
+        // The local client ID
+        uint64_t id;
+
+        // The client username. Chosen by the client
+        std::string username;
+
+
+        RemoteClientState state = REMOTE_STATE_INVALID;
         Net::TCPServerClient *client;
         Server *server;
+
+        void sendPacket(ProtoNet::PacketType, google::protobuf::Message*);
+
+        // Packet sending helpers
+        void sendError(ProtoNet::ErrorType, std::string);
+        void sendAcceptHandshake();
+
+        // Packet handling helpers
+        void onPacketError(ProtoNet::PacketError);
+        void onPacketBeginHandshake(ProtoNet::PacketBeginHandshake);
+        void onPacketCompleteHandshake(ProtoNet::PacketCompleteHandshake);
 
         void onTCPEvent(Net::TCPEvent&);
         void parseData(muduo::string&);
@@ -51,8 +68,10 @@ class ServerConfig {
         std::string host_name;
         short host_port;
 
+        std::string password = "";
+
         std::vector<std::string> worlds;
-        short tickrate;
+        uint8_t tickrate = 64;
 
         std::vector<std::string> login_servers;
         std::vector<std::string> mods;
@@ -61,11 +80,12 @@ class ServerConfig {
 };
 
 class Server {
-    public:
-        // This represents the global client ID counter
-        ushort client_id_inc = 1;
+    private:
+        uint64_t client_id_inc = 0;
 
-        // This holds all the worlds loaded by the server
+        // Set of clients pending completion of their handshake
+        std::set<RemoteClient*> pending;
+    public:
         std::map<std::string, Terra::World*> worlds;
 
         // Holds all registered block types
@@ -73,7 +93,7 @@ class Server {
 
         // A mapping of connected clients
         std::mutex clients_mutex;
-        std::map<ushort, RemoteClient*> clients;
+        std::map<uint64_t, RemoteClient*> clients;
 
         // The main thread
         std::thread main_thread;
@@ -140,7 +160,7 @@ class Server {
         bool onCVarChange(CVar *, Container *);
 
         // Generates a new client-id
-        ushort newClientID();
+        uint64_t newClientID();
 
         // Manage block types
         void addBlockType(Terra::BlockType*);
@@ -148,4 +168,6 @@ class Server {
         Terra::BlockType* getBlockType(std::string);
 
         void onTCPEvent(Net::TCPEvent&);
+
+        void addClient(RemoteClient*);
 };
