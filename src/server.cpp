@@ -24,9 +24,10 @@ Server::Server() : dex(db) {
 
     // Load the worlds we need
     for (auto world_name : this->config.worlds) {
-        Terra::World *w = new Terra::World(world_name);
-        w->open();
-        this->addWorld(w);
+        this->loadWorld(world_name);
+        // Terra::World *w = new Terra::World(world_name);
+        // w->open();
+        // this->addWorld(w);
     }
 
     // Load the mod-index
@@ -124,29 +125,52 @@ void Server::loadCvars() {
 
 }
 
-void Server::addWorld(Terra::World *w) {
-    if (this->worlds.count(w->name)) {
-        ERROR("Cannot add world with name %s, another world with that"
-            "name already exists!", w->name.c_str());
-        throw Exception("Failed to add world to server, already exists!");
+void Server::loadWorld(std::string name) {
+    auto world = new Terra::World(name);
+
+    // Grab the ID out of the worlds database
+    DBQuery* query = this->db->query("SELECT id FROM worlds WHERE name=?");
+    query->bindText(name);
+    query->execute();
+
+    if (!query->empty()) {
+        INFO("World %s already exists in the database (%i)", name.c_str(), query->getInt(0));
+        world->id = query->getInt(0);
+    } else {
+        INFO("World %s does not exist in the database, creating...", name.c_str());
+        DBQuery* insert = this->db->query("INSERT INTO worlds (name) VALUES (?)");
+        insert->bindText(name);
+        insert->execute();
+        world->id = insert->getLastInsertID();
+        insert->end();
     }
+
+    query->end();
+
+    // Check if the world exists yet
+    if (this->worlds.count(world->id)) {
+        throw Exception("Failed to loadWorld, it's already loaded!");
+    }
+
+    // Actually open and load the world
+    world->open();
 
     // Copy the types over
     for (auto type : this->types) {
-        w->addBlockType(type.second);
+        world->addBlockType(type.second);
     }
 
-    auto blk = w->get_block(Point(0, 0, 0));
+    auto blk = world->get_block(Point(0, 0, 0));
 
     // TODO: This sucks that we have to have a block at 0,0,0 AND that we use the static string :/
     if (blk == nullptr || blk->type->name == "base:air") {
         INFO("We haven't loaded this world before, generating land...");
-        w->generateInitialWorld();
+        world->generateInitialWorld();
     } else {
         INFO("World has been loaded before...");
     }
 
-    this->worlds[w->name] = w;
+    this->worlds[world->id] = world;
 
     // TODO: Worlds should have their own update threads, we need to spawn
     //  that here.
@@ -154,7 +178,6 @@ void Server::addWorld(Terra::World *w) {
 
 void Server::loadDatabase() {
     int err = SQLITE_OK;
-
     char* errStr = NULL;
 
     err = sqlite3_exec(db->db, "CREATE TABLE players ("
@@ -164,11 +187,19 @@ void Server::loadDatabase() {
             "x INTEGER,"
             "y INTEGER,"
             "z INTEGER,"
-            "world TEXT,"
+            "world INTEGER,"
             "group_id INTEGER);", 0, 0, &errStr);
 
     if (err != SQLITE_OK) {
-        // TODO: remove db on error
+        ERROR("sqlite3_exec error: %s", errStr);
+        throw Exception("Failed to load the server sqlite database");
+    }
+
+    err = sqlite3_exec(db->db, "CREATE TABLE worlds ("
+            "id INTEGER PRIMARY KEY ASC,"
+            "name TEXT);", 0, 0, &errStr);
+
+    if (err != SQLITE_OK) {
         ERROR("sqlite3_exec error: %s", errStr);
         throw Exception("Failed to load the server sqlite database");
     }
@@ -235,7 +266,7 @@ void Server::onTCPEvent(Net::TCPEvent &event) {
 }
 
 void Server::addClient(RemoteClient *remote) {
-    DBQuery* query = this->db->query("SELECT id, x, y, z FROM players WHERE fingerprint=?");
+    DBQuery* query = this->db->query("SELECT id, x, y, z, world FROM players WHERE fingerprint=?");
     query->bindText(remote->fingerprint);
     query->execute();
 
@@ -246,13 +277,19 @@ void Server::addClient(RemoteClient *remote) {
         remote->pos.y = query->getInt(2);
         remote->pos.z = query->getInt(3);
 
-        // TODO: load world
+        if (!this->worlds.count(query->getInt(4))) {
+            WARN("Player is in an unloaded world.");
+            throw Exception("TODO: load the world :/");
+        }
+
+        remote->world = this->worlds[query->getInt(4)];
     } else {
         INFO("Inserting new player for fingerprint %s.", remote->fingerprint.c_str());
-        DBQuery* insert = this->db->query("INSERT INTO players (fingerprint, username, group_id) VALUES (?, ?, ?)");
+        DBQuery* insert = this->db->query("INSERT INTO players (fingerprint, username, group_id, world) VALUES (?, ?, ?, ?)");
         insert->bindText(remote->fingerprint);
         insert->bindText(remote->username);
         insert->bindInt(0);
+        insert->bindInt(1);
         insert->execute();
         remote->id = insert->getLastInsertID();
         insert->end();
@@ -268,14 +305,6 @@ void Server::addClient(RemoteClient *remote) {
     this->clients_mutex.lock();
     this->clients[remote->id] = remote;
     this->clients_mutex.unlock();
-}
-
-uint64_t Server::newClientID() {
-    while (this->clients[client_id_inc]) {
-        client_id_inc++;
-    }
-
-    return client_id_inc;
 }
 
 void Server::addBlockType(Terra::BlockType *type) {
@@ -403,7 +432,8 @@ void RemoteClient::sendAcceptHandshake() {
 
 void RemoteClient::sendBegin() {
     ProtoNet::PacketBegin pkt;
-    pkt.mutable_world()->set_name("test");
+    pkt.mutable_world()->set_id(this->world->id);
+    pkt.mutable_world()->set_name(this->world->name);
     pkt.mutable_pos()->set_x(this->pos.x);
     pkt.mutable_pos()->set_y(this->pos.y);
     pkt.mutable_pos()->set_z(this->pos.z);

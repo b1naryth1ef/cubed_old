@@ -38,6 +38,7 @@ void World::open() {
             throw Exception("Failed to open worlld file");
         }
 
+        // TODO: get the name from the path
         this->name = "world";
         this->version = CURRENT_WORLD_VERSION;
         this->seed = "testseed";

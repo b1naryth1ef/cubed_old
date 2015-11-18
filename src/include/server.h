@@ -93,14 +93,14 @@ class ServerConfig {
 
 class Server {
     private:
-        uint64_t client_id_inc = 0;
+        uint64_t world_id_inc = 0;
 
     public:
         // Set of clients pending completion of their handshake
         std::set<RemoteClient*> pending;
 
         // Loaded worlds
-        std::map<std::string, Terra::World*> worlds;
+        std::map<uint16_t, Terra::World*> worlds;
 
         // Holds all registered block types
         Terra::BlockTypeCache types;
@@ -147,7 +147,7 @@ class Server {
         ~Server();
 
         // Adds a world to the server
-        void addWorld(Terra::World *);
+        void loadWorld(std::string);
 
         // Loads cvars, should be called early (startup)
         void loadCvars();
@@ -172,9 +172,6 @@ class Server {
 
         // Fired when CVarDict (this.cvars) has a change
         bool onCVarChange(CVar *, Container *);
-
-        // Generates a new client-id
-        uint64_t newClientID();
 
         // Manage block types
         void addBlockType(Terra::BlockType*);

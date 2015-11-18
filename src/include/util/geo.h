@@ -1,6 +1,7 @@
 #pragma once
 
 #include "global.h"
+#include "packet.pb.h"
 
 class Point;
 
@@ -20,6 +21,8 @@ class Point {
             std::string result = std::string(buff);
             return result;
         }
+
+        ProtoNet::IPoint* to_proto();
 };
 
 struct pointHashFunc {
@@ -49,6 +52,8 @@ class BoundingBox {
         bool contains(Point);
         bool contains(BoundingBox);
         bool intersects(BoundingBox);
+
+        ProtoNet::IBoundingBox* to_proto();
 
         uint64_t size();
 

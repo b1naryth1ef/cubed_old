@@ -48,6 +48,8 @@ class World {
         FILE *fp;
 
     public:
+        uint32_t id;
+
         rocksdb::DB *db;
         std::string path;
         std::string name;

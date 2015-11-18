@@ -37,8 +37,28 @@ message IPoint {
   float z = 3;
 }
 
+message IBoundingBox {
+  IPoint min = 1;
+  IPoint max = 2;
+}
+
+message IBlockType {
+  uint32 id = 1;
+  string name = 2;
+}
+
 message IWorld {
-  string name = 1;
+  uint64 id = 1;
+  string name = 2;
+
+  repeated IBlockType blocks = 3;
+}
+
+message IRegion {
+  uint64 world = 1;
+  IBoundingBox box = 2;
+
+  repeated uint32 blocks = 3;
 }
 
 message PacketError {

@@ -28,6 +28,14 @@ Point::Point(const Point& p) {
 }
 
 
+ProtoNet::IPoint* Point::to_proto() {
+    ProtoNet::IPoint* point = new ProtoNet::IPoint;
+    point->set_x(x);
+    point->set_y(y);
+    point->set_z(z);
+    return point;
+}
+
 BoundingBox::BoundingBox(Point min, Point max) {
     this->min = min;
     this->max = max;
@@ -51,6 +59,13 @@ bool BoundingBox::contains(Point p) {
 
 bool BoundingBox::contains(BoundingBox other) {
     return (this->contains(other.min) && this->contains(other.max));
+}
+
+ProtoNet::IBoundingBox* BoundingBox::to_proto() {
+    ProtoNet::IBoundingBox* box = new ProtoNet::IBoundingBox;
+    box->set_allocated_min(this->min.to_proto());
+    box->set_allocated_max(this->max.to_proto());
+    return box;
 }
 
 uint64_t BoundingBox::size() {

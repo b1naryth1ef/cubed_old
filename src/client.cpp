@@ -193,6 +193,7 @@ void Client::onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake pkt) {
 
 void Client::onPacketBegin(ProtoNet::PacketBegin pkt) {
     // TODO: set position and world
+    INFO("BEGIN WORLD: %s", pkt.world().name().c_str());
 }
 
 void ClientConfig::load() {
