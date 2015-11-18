@@ -1,6 +1,8 @@
 #pragma once
 
 #include "global.h"
+#include <sodium.h>
+#include <algorithm>
 
 using namespace rapidjson;
 
@@ -240,5 +242,26 @@ static void loadJSONFile(std::string path, Document *d) {
     }
 
     fclose(fp);
+}
+
+static std::string random_string(size_t length) {
+    auto randchar = []() -> char {
+        const char charset[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+        const size_t max_index = (sizeof(charset) - 1);
+        return charset[rand() % max_index];
+    };
+    std::string str(length, 0);
+    std::generate_n(str.begin(), length, randchar);
+    return str;
+}
+
+static std::string hash_string(std::string data) {
+    unsigned char hash[crypto_generichash_BYTES];
+
+    crypto_generichash(hash, sizeof(hash), (unsigned char *) data.c_str(), data.size(), NULL, 0);
+    return std::string((char *) hash);
 }
 

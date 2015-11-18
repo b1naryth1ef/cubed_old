@@ -4,6 +4,10 @@
 
 using namespace rapidjson;
 
+ModDex::ModDex(DB *db) {
+    this->db = db;
+}
+
 bool ModDex::loadFromPath(std::string dir) {
     DEBUG("Loading mod from path %s", dir.c_str());
     Mod result;

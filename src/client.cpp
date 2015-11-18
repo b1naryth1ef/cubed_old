@@ -106,6 +106,7 @@ void Client::sendBeginHandshake() {
     ProtoNet::PacketBeginHandshake handshake;
 
     handshake.set_username(this->config.username);
+    handshake.set_fingerprint("TEST");
     handshake.set_version(CUBED_VERSION);
 
     this->sendPacket(ProtoNet::BeginHandshake, &handshake);
@@ -148,6 +149,12 @@ void Client::parseData(muduo::string& data) {
             this->onPacketAcceptHandshake(inner);
             break;
         }
+        case ProtoNet::Begin: {
+            ProtoNet::PacketBegin inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketBegin(inner);
+            break;
+        }
         default: {
             WARN("Recieved unknown packet %i (data-size: %i)", packet.type(), packet.data().size());
         }
@@ -178,8 +185,14 @@ void Client::onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake pkt) {
         password = "test";
     }
 
+    // TODO: sign with our keypair
+
     // Send the end of our three-way handshake
     this->sendCompleteHandshake(password);
+}
+
+void Client::onPacketBegin(ProtoNet::PacketBegin pkt) {
+    // TODO: set position and world
 }
 
 void ClientConfig::load() {

@@ -2,15 +2,13 @@ syntax = "proto3";
 
 package ProtoNet;
 
-import "world.proto";
-
 enum PacketType {
   Invalid = 0;
   Error = 1;
   BeginHandshake = 2;
   AcceptHandshake = 3;
   CompleteHandshake = 4;
-  Being = 5;
+  Begin = 5;
 }
 
 enum ErrorType {
@@ -33,6 +31,16 @@ message ISession {
   bytes session = 2;
 }
 
+message IPoint {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message IWorld {
+  string name = 1;
+}
+
 message PacketError {
   ErrorType type = 1;
   string msg = 2;
@@ -46,11 +54,14 @@ message PacketBeginHandshake {
   // Username is provided for servers that do not require session authentication
   string username = 1;
 
+  // The fingerprint of this user.
+  bytes fingerprint = 2;
+
   // Current protocol version we are attempting to handshake with
-  uint32 version = 2;
+  uint32 version = 3;
 
   // Client session
-  ISession session = 3;
+  ISession session = 4;
 }
 
 /*
@@ -66,6 +77,9 @@ message PacketAcceptHandshake {
 
   // Is this server password protected??
   bool password = 3;
+
+  // The challenge string
+  string challenge = 4;
 }
 
 
@@ -73,7 +87,11 @@ message PacketAcceptHandshake {
   Final step in the three-way handshake, client expresses intent to fully join the server.
 */
 message PacketCompleteHandshake {
+  // Should be set if the server is password protected
   string password = 1;
+
+  // Solution to the challenge
+  string solution = 2;
 
   // TODO: mod information goes here
 }
@@ -83,8 +101,8 @@ message PacketCompleteHandshake {
 */
 message PacketBegin {
   // Send information about the current world
-  world.World world = 1;
+  IWorld world = 1;
 
   // Send the current location
-  world.Point pos = 2;
+  IPoint pos = 2;
 }

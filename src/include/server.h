@@ -32,15 +32,26 @@ class Server;
 
 // Represents a remote client playing on the server
 class RemoteClient {
+    private:
+        // This is used to verify the clients keypair
+        std::string challenge;
+
     public:
         RemoteClient(Net::TCPServerClient*, Server*);
+        ~RemoteClient();
 
-        // The local client ID
+        // The world and position of this player
+        Point pos;
+        Terra::World *world;
+
+        // The local client ID (per session)
         uint64_t id;
 
         // The client username. Chosen by the client
         std::string username;
 
+        // The client keypair fingerprint
+        std::string fingerprint;
 
         RemoteClientState state = REMOTE_STATE_INVALID;
         Net::TCPServerClient *client;
@@ -51,6 +62,7 @@ class RemoteClient {
         // Packet sending helpers
         void sendError(ProtoNet::ErrorType, std::string);
         void sendAcceptHandshake();
+        void sendBegin();
 
         // Packet handling helpers
         void onPacketError(ProtoNet::PacketError);
@@ -83,9 +95,11 @@ class Server {
     private:
         uint64_t client_id_inc = 0;
 
+    public:
         // Set of clients pending completion of their handshake
         std::set<RemoteClient*> pending;
-    public:
+
+        // Loaded worlds
         std::map<std::string, Terra::World*> worlds;
 
         // Holds all registered block types

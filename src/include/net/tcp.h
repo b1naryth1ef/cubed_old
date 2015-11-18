@@ -117,6 +117,10 @@ class TCPServerClient : public TCPEventDispatcher {
 
         TCPServerClient(TCPServer*, const muduo::net::TcpConnectionPtr&);
 
+        ~TCPServerClient() {
+            this->server->rmvClient(this);
+        }
+
         void onMessage(
             const muduo::net::TcpConnectionPtr&,
             muduo::net::Buffer*,

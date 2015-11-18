@@ -1,19 +1,9 @@
 #include "server.h"
 
-Server::Server() {
+Server::Server() : dex(db) {
     INFO("Cubed Server v%i.%i.%i (%i, git: %s)",
         CUBED_RELEASE_A, CUBED_RELEASE_B, CUBED_RELEASE_C, CUBED_VERSION,
         CUBED_GIT_HASH);
-
-    // Load the SQLite3 Module stuff TODO: move/rename?
-    init_db_module();
-
-    // Load the servers keypairs
-    /*if (this->keypair.empty) {
-        INFO("Generating new server keypair");
-        this->keypair.generate();
-        this->keypair.save("keys");
-    }*/
 
     // Load the server cvars
     this->loadCvars();
@@ -21,6 +11,7 @@ Server::Server() {
 
     // Open up the server-db (player storage/etc)
     this->db = new DB("server.db");
+    this->db->init_sqlite();
     if (this->db->is_new) {
         this->loadDatabase();
     }
@@ -38,9 +29,7 @@ Server::Server() {
         this->addWorld(w);
     }
 
-
     // Load the mod-index
-    this->dex.db = this->db;
     for (auto mod_name : this->config.mods) {
         this->dex.loadFromPath(mod_name);
     }
@@ -166,13 +155,23 @@ void Server::addWorld(Terra::World *w) {
 void Server::loadDatabase() {
     int err = SQLITE_OK;
 
-    // err = sqlite3_exec(db->db, "CREATE TABLE mods ("
-    //     "id INTEGER PRIMARY KEY ASC,"
-    //     "name TEXT,"
-    //     "version INTEGER"
-    // ");", 0, 0, 0);
+    char* errStr = NULL;
 
-    assert(err == SQLITE_OK);
+    err = sqlite3_exec(db->db, "CREATE TABLE players ("
+            "id INTEGER PRIMARY KEY ASC,"
+            "fingerprint TEXT,"
+            "username TEXT,"
+            "x INTEGER,"
+            "y INTEGER,"
+            "z INTEGER,"
+            "world TEXT,"
+            "group_id INTEGER);", 0, 0, &errStr);
+
+    if (err != SQLITE_OK) {
+        // TODO: remove db on error
+        ERROR("sqlite3_exec error: %s", errStr);
+        throw Exception("Failed to load the server sqlite database");
+    }
 }
 
 void ServerConfig::load() {
@@ -208,11 +207,27 @@ bool Server::onCVarChange(CVar *cv, Container *new_value) {
 };
 
 void Server::onTCPEvent(Net::TCPEvent &event) {
+    RemoteClient *rc = nullptr;
+
     switch (event.type) {
         case Net::TCP_CONNECT:
             this->pending.insert(new RemoteClient(event.client, this));
             break;
         case Net::TCP_DISCONNECT:
+            for (auto client : this->clients) {
+                if (client.second->client == event.client) {
+                    rc = client.second;
+                    break;
+                }
+            }
+
+            // If we didn't find a remoteclient, something is fucky
+            if (rc == nullptr) {
+                WARN("Recieved TCP_DISCONNECT for untracked connection");
+                return;
+            }
+
+            delete(rc);
             break;
         case Net::TCP_MESSAGE:
             break;
@@ -220,46 +235,40 @@ void Server::onTCPEvent(Net::TCPEvent &event) {
 }
 
 void Server::addClient(RemoteClient *remote) {
-    this->pending.erase(remote);
+    DBQuery* query = this->db->query("SELECT id, x, y, z FROM players WHERE fingerprint=?");
+    query->bindText(remote->fingerprint);
+    query->execute();
 
+    if (!query->empty()) {
+        INFO("Found an existing player for fingerprint %s (%i).", remote->fingerprint.c_str(), query->getInt(0));
+        remote->id = query->getInt(0);
+        remote->pos.x = query->getInt(1);
+        remote->pos.y = query->getInt(2);
+        remote->pos.z = query->getInt(3);
+
+        // TODO: load world
+    } else {
+        INFO("Inserting new player for fingerprint %s.", remote->fingerprint.c_str());
+        DBQuery* insert = this->db->query("INSERT INTO players (fingerprint, username, group_id) VALUES (?, ?, ?)");
+        insert->bindText(remote->fingerprint);
+        insert->bindText(remote->username);
+        insert->bindInt(0);
+        insert->execute();
+        remote->id = insert->getLastInsertID();
+        insert->end();
+
+        // TODO: how do we decided the spawn point?
+        remote->pos = Point(0, 2, 0);
+    }
+
+    query->end();
+
+    // Now add the user to our clients mapping
+    this->pending.erase(remote);
     this->clients_mutex.lock();
-    remote->id = this->newClientID();
     this->clients[remote->id] = remote;
     this->clients_mutex.unlock();
 }
-
-/**
-bool Server::onTCPConnectionOpen(TCPRemoteClient *c) {
-    DEBUG("Adding TCPClient...");
-    RemoteClient *rc = new RemoteClient();
-    rc->state = STATE_NEW;
-    rc->tcp = c;
-    rc->id = c->id = this->newClientID();
-    c->remote = rc;
-
-    this->clients_mutex.lock();
-    this->clients[rc->id] = rc;
-    this->clients_mutex.unlock();
-
-    return true;
-}
-
-bool Server::onTCPConnectionClose(TCPRemoteClient *c) {
-    DEBUG("Removing TCPClient...");
-    this->clients_mutex.lock();
-    delete(this->clients[c->id]);
-    this->clients.erase(c->id);
-    this->clients_mutex.unlock();
-
-    return true;
-}
-
-bool Server::onTCPConnectionData(TCPRemoteClient *c) {
-    DEBUG("Running tryparse on client %i", c->id);
-    this->clients[c->id]->tryParse();
-    return true;
-}
-**/
 
 uint64_t Server::newClientID() {
     while (this->clients[client_id_inc]) {
@@ -269,92 +278,6 @@ uint64_t Server::newClientID() {
     return client_id_inc;
 }
 
-/*
-void Server::handlePacket(cubednet::Packet *pk, RemoteClient *c) {
-    std::string data;
-
-    // If we're connected, the data MUST be encrypted!
-    if (c->state == STATE_CONNECTED) {
-        data = this->keypair.decrypt(
-            pk->data(),
-            pk->nonce(),
-            (* c->our_kp));
-    } else {
-        data = pk->data();
-    }
-
-    switch (pk->pid()) {
-        case PACKET_HANDSHAKE: {
-            cubednet::PacketHandshake pkh;
-            assert(pkh.ParseFromString(data));
-            this->handlePacketHandshake(pkh, c);
-            break;
-        }
-        case PACKET_STATUS_REQUEST: {
-            cubednet::PacketStatusRequest pkh;
-            assert(pkh.ParseFromString(data));
-            this->handlePacketStatusRequest(pkh, c);
-            break;
-        }
-    }
-}
-*/
-
-/*
-void Server::handlePacketHandshake(cubednet::PacketHandshake pk, RemoteClient *c) {
-    DEBUG("Client has version %i, we have %i!", pk.version(), CUBED_VERSION);
-    if (pk.version() != CUBED_VERSION) {
-        c->disconnect(1, "Invalid Cubed Version!");
-        return;
-    }
-
-    if (c->state != STATE_NEW) {
-        c->disconnect(1, "Generic Protocol Error.");
-        return;
-    }
-
-    if (pk.session() != 0) {
-        c->disconnect(1, "Login servers are not supported yet!");
-        return;
-    }
-
-    c->state = STATE_HANDSHAKE;
-    c->our_kp = new KeyPair();
-    c->our_kp->loadFromString("", pk.pubkey());
-    c->serv_kp = &this->keypair;
-
-    // Send a init packet, this is now encrypted
-    cubednet::PacketInit pkinit;
-    pkinit.set_id(c->id);
-    c->tcp->send_packet(PACKET_INIT, &pkinit);
-}
-
-void Server::handlePacketStatusRequest(cubednet::PacketStatusRequest pk, RemoteClient *c) {
-    // Make sure the junk data is the right size. This is used to prevent
-    //  spam/dos attacks against the server by ensuring the request packet
-    //  is always larger than the servers response.
-    if (pk.data().size() < STATUS_JUNK_DATA_SIZE) {
-        c->terminate();
-    }
-
-    cubednet::PacketStatusResponse res;
-    res.set_name(this->sv_name->getString());
-    res.set_motd(this->sv_motd->getString());
-    res.set_players(this->clients.size());
-    res.set_version(this->sv_version->getInt());
-
-    // Set the public key
-    res.set_pubkey(this->keypair.getPublicKey());
-
-    char buffer[1024];
-    sprintf(buffer, "%Ld|%Ld|%i", pk.a1(), pk.a2(), 0);
-
-    cubednet::SignedMessage *sm(res.mutable_data());
-    this->keypair.sign(buffer).toPacket(sm);
-
-    c->tcp->send_packet(PACKET_STATUS_RESPONSE, &res);
-}
-*/
 void Server::addBlockType(Terra::BlockType *type) {
     if (this->types.count(type->name)) {
         WARN("addBlockType replacing type %s", type->name.c_str());
@@ -385,6 +308,17 @@ RemoteClient::RemoteClient(Net::TCPServerClient *client, Server *server) {
     this->client = client;
     this->server = server;
     this->client->addEventCallback(std::bind(&RemoteClient::onTCPEvent, this, std::placeholders::_1));
+}
+
+RemoteClient::~RemoteClient() {
+    if (id) {
+        INFO("[%i] deregistering self in deconstructor", id);
+        server->clients_mutex.lock();
+        server->clients.erase(id);
+        server->clients_mutex.unlock();
+    } else {
+        server->pending.erase(this);
+    }
 }
 
 void RemoteClient::onTCPEvent(Net::TCPEvent& event) {
@@ -461,7 +395,20 @@ void RemoteClient::sendAcceptHandshake() {
     ProtoNet::PacketAcceptHandshake pkt;
     pkt.set_id(this->id);
     pkt.set_password((this->server->config.password != ""));
+
+    this->challenge = random_string(32);
+    pkt.set_challenge(this->challenge);
     this->sendPacket(ProtoNet::AcceptHandshake, &pkt);
+}
+
+void RemoteClient::sendBegin() {
+    ProtoNet::PacketBegin pkt;
+    pkt.mutable_world()->set_name("test");
+    pkt.mutable_pos()->set_x(this->pos.x);
+    pkt.mutable_pos()->set_y(this->pos.y);
+    pkt.mutable_pos()->set_z(this->pos.z);
+    this->sendPacket(ProtoNet::Begin, &pkt);
+
 }
 
 void RemoteClient::onPacketError(ProtoNet::PacketError err) {
@@ -492,6 +439,8 @@ void RemoteClient::onPacketBeginHandshake(ProtoNet::PacketBeginHandshake pkt) {
 
     // TODO: check we don't already have a client by this username
 
+    this->fingerprint = pkt.fingerprint();
+
     // Send accept handshake
     this->server->addClient(this);
     this->sendAcceptHandshake();
@@ -508,9 +457,12 @@ void RemoteClient::onPacketCompleteHandshake(ProtoNet::PacketCompleteHandshake p
         return;
     }
 
+    // TODO: verify solution
+
     this->state = REMOTE_STATE_CONNECTED;
 
     // TODO: send begin state
+    this->sendBegin();
 }
 
 void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {

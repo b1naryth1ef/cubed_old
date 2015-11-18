@@ -81,6 +81,7 @@ class Client {
         // Packet handlers
         void onPacketError(ProtoNet::PacketError);
         void onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake);
+        void onPacketBegin(ProtoNet::PacketBegin);
 
         // Utility methods for sending data over the wire
         void sendBeginHandshake();

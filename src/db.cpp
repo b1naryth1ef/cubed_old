@@ -79,17 +79,74 @@ void DB::end() {
     assert(sqlite3_exec(this->db, "END TRANSACTION;", 0, 0, 0) == SQLITE_OK);
 }
 
-bool DB::addCached(std::string name, std::string query) {
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(this->db, query.c_str(), 256, &stmt, &ztail);
-    this->cached[name] = stmt;
-}
+DBQuery* DB::addCached(std::string query) {
+    std::string hash = hash_string(query);
 
-sqlite3_stmt *DB::getCached(std::string name) {
-    return this->cached[name];
+    sqlite3_stmt *stmt;
+    int result = sqlite3_prepare_v2(this->db, query.c_str(), 256, &stmt, &ztail);
+
+    if (result != SQLITE_OK) {
+        ERROR("Failed to addCached: %i (%s)", result, sqlite3_errmsg(db));
+        throw Exception("Failed to add cached SQL statement");
+    }
+
+    this->cached[hash] = new DBQuery(this, stmt);
+    return this->cached[hash];
 }
 
 // Should be called on startup, makes sure SQLite is configured correctly
-void init_db_module() {
+void DB::init_sqlite() {
     sqlite3_config(SQLITE_CONFIG_SERIALIZED);
+}
+
+DBQuery::DBQuery(DB* db, sqlite3_stmt* stmt) {
+    this->db = db;
+    this->stmt = stmt;
+}
+
+void DBQuery::reset() {
+    this->mutex.lock();
+    this->index = 1;
+
+    sqlite3_clear_bindings(stmt);
+    sqlite3_reset(stmt);
+}
+
+void DBQuery::end() {
+    this->mutex.unlock();
+}
+
+int DBQuery::getLastInsertID() {
+    return sqlite3_last_insert_rowid(db->db);
+}
+
+void DBQuery::bindText(std::string text) {
+    sqlite3_bind_text(stmt, this->index, text.c_str(), -1, SQLITE_TRANSIENT);
+    this->index++;
+}
+
+void DBQuery::bindInt(int v) {
+    sqlite3_bind_int(stmt, this->index, v);
+    this->index++;
+}
+
+int DBQuery::execute() {
+    this->result = sqlite3_step(stmt);
+    return this->result;
+}
+
+int DBQuery::getInt(int dex) {
+    return sqlite3_column_int(stmt, dex);
+}
+
+DBQuery* DB::query(std::string sql) {
+    std::string hash = hash_string(sql);
+
+    if (cached.count(hash)) {
+        return cached[hash];
+    }
+
+    DBQuery* cached = this->addCached(sql);
+    cached->reset();
+    return cached;
 }

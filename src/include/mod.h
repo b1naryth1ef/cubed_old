@@ -31,8 +31,12 @@ class Mod {
 };
 
 class ModDex {
+    private:
+        DB* db;
+
     public:
-        DB *db;
+        ModDex(DB*);
+
         std::map<std::string, Mod*> mods;
         bool loadFromPath(std::string);
 
