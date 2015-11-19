@@ -9,6 +9,7 @@
 #include <muduo/net/TcpServer.h>
 #include <muduo/net/TcpClient.h>
 #include <muduo/net/InetAddress.h>
+#include <muduo/base/Logging.h>
 
 
 namespace Net {

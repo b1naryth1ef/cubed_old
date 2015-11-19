@@ -11,6 +11,8 @@ TCPServer::TCPServer(muduo::net::EventLoop *loop, ConnString cs) {
 
     this->server = new muduo::net::TcpServer(loop, addr, "");
     this->server->setConnectionCallback(std::bind(&TCPServer::onNewConnection, this, std::placeholders::_1));
+
+    muduo::Logger::setLogLevel(muduo::Logger::DEBUG);
 }
 
 TCPServer::~TCPServer() {}
@@ -72,7 +74,7 @@ TCPServerClient::TCPServerClient(TCPServer *server, const muduo::net::TcpConnect
         std::placeholders::_3));
 }
 
-void TCPServerClient::onMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp ts) {
+void TCPServerClient::onMessage(const muduo::net::TcpConnectionPtr &cn, muduo::net::Buffer *buff, muduo::Timestamp ts) {
     TCPEvent event = TCPEvent(TCP_MESSAGE).setClient(this).setServer(this->server).setBuffer(buff).setTimestamp(ts);
     this->triggerEvent(event);
     this->server->triggerEvent(event);

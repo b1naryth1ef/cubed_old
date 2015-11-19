@@ -152,23 +152,34 @@ Block* World::create_block(Point p, std::string type) {
 }
 
 Block* World::create_block(Point p, BlockType* type) {
-    return new Block(this, type, p);
+    // TODO: add to block cache
+    this->blocks[p] = new Block(this, type, p);
+    return this->blocks[p];
 }
 
 Block* World::get_block(Point p) {
+    if (this->blocks.count(p)) {
+        return this->blocks[p];
+    }
+
     std::string type;
     auto status = this->db->Get(rocksdb::ReadOptions(), Block::key(p), &type);
 
     // If the block isn't in the database, lets assume its air
     if (!status.ok() && status.code() == 1) {
+        INFO("1");
         return this->create_block(p, "base:air");
     }
 
     if (!this->holder->haveType(type)) {
+        INFO("2");
         return nullptr;
     }
 
-    return new Block(this, this->holder->getBlockType(type), p);
+    INFO("3");
+
+    return this->create_block(p, type);
+    // return new Block(this, this->holder->getBlockType(type), p);
 }
 
 void World::save_block(Block *blk) {

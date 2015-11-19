@@ -400,24 +400,28 @@ void RemoteClient::sendBegin() {
 }
 
 void RemoteClient::sendRegion(Terra::World *world, BoundingBox b) {
-    ProtoNet::IRegion region;
+    auto region = new ProtoNet::IRegion;
 
-    region.set_world(world->id);
-    region.set_allocated_box(b.to_proto());
+    region->set_world(world->id);
+    region->set_allocated_box(b.to_proto());
+
+    Terra::Block* blk = nullptr;
 
     // Iterate over all the blocks in the region and add them to the packet
     for (int x = b.min.x; x < b.max.x; x++) {
         for (int y = b.min.y; y < b.max.y; y++) {
             for (int z = b.min.z; z < b.max.z; z++) {
-                Terra::Block* blk = this->world->get_block(Point(x, y, z));
-                region.add_blocks(blk->type->id);
+                // TODO: this causes a segfault somewhere completely different lol
+                // blk = this->world->get_block(Point(x, y, z));
+                // region->add_blocks(blk->type->id);
+                region->add_blocks(1);
             }
         }
     }
 
     ProtoNet::PacketRegion pkt;
-    pkt.set_allocated_region(&region);
-    DEBUG("sending region");
+    pkt.set_allocated_region(region);
+    DEBUG("sending region %i", region->blocks_size());
     this->sendPacket(ProtoNet::Region, &pkt);
 }
 
@@ -479,7 +483,6 @@ void RemoteClient::onPacketRequestRegion(ProtoNet::PacketRequestRegion pkt) {
     DEBUG("Client has requested region...");
     // TODO: validation
     this->sendRegion(this->server->worlds[pkt.world_id()], BoundingBox(pkt.area()));
-
 }
 
 void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {
