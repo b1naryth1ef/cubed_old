@@ -9,6 +9,8 @@ enum PacketType {
   AcceptHandshake = 3;
   CompleteHandshake = 4;
   Begin = 5;
+  RequestRegion = 6;
+  Region = 7;
 }
 
 enum ErrorType {
@@ -125,4 +127,20 @@ message PacketBegin {
 
   // Send the current location
   IPoint pos = 2;
+}
+
+/*
+  Requests a regional portion of the world data
+*/
+message PacketRequestRegion {
+  uint64 world_id = 1;
+  IBoundingBox area = 2;
+}
+
+/*
+  Sends a regional portion of the world state
+*/
+
+message PacketRegion {
+  IRegion region = 1;
 }

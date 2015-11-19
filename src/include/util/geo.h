@@ -10,6 +10,7 @@ class Point {
         double x, y, z;
 
         Point() {};
+        Point(ProtoNet::IPoint);
         Point(double x, double y, double z);
         Point(int x, int y, int z);
         Point(const rapidjson::Value &v);
@@ -48,6 +49,7 @@ class BoundingBox {
         Point min, max;
 
         BoundingBox(Point, Point);
+        BoundingBox(ProtoNet::IBoundingBox);
 
         bool contains(Point);
         bool contains(BoundingBox);

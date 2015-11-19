@@ -2,6 +2,12 @@
 
 #include "util/geo.h"
 
+Point::Point(ProtoNet::IPoint point) {
+    this->x = point.x();
+    this->y = point.y();
+    this->z = point.z();
+}
+
 Point::Point(double x, double y, double z) {
     this->x = x;
     this->y = y;
@@ -39,6 +45,11 @@ ProtoNet::IPoint* Point::to_proto() {
 BoundingBox::BoundingBox(Point min, Point max) {
     this->min = min;
     this->max = max;
+}
+
+BoundingBox::BoundingBox(ProtoNet::IBoundingBox box) {
+    this->min = Point(box.min());
+    this->max = Point(box.max());
 }
 
 bool BoundingBox::intersects(BoundingBox other) {

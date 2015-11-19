@@ -83,23 +83,8 @@ void Server::mainLoop() {
 }
 
 void Server::tick() {
-    this->clients_mutex.lock();
-
-    /*
-    for (auto c : this->clients) {
-        if (c.second->packet_buffer.size()) {
-            DEBUG("Parsing one packet...");
-            cubednet::Packet *p = c.second->packet_buffer.front();
-            c.second->packet_buffer.pop();
-            this->handlePacket(p, c.second);
-            delete(p);
-        }
-    }
-    */
-    this->clients_mutex.unlock();
-
     for (auto w : this->worlds) {
-        // w.second->tick();
+        //w.second->tick();
     }
 }
 
@@ -128,37 +113,22 @@ void Server::loadCvars() {
 void Server::loadWorld(std::string name) {
     auto world = new Terra::World(name);
 
-    // Grab the ID out of the worlds database
-    DBQuery* query = this->db->query("SELECT id FROM worlds WHERE name=?");
-    query->bindText(name);
-    query->execute();
+    // Set the blocktypeholder
+    world->holder = this;
 
-    if (!query->empty()) {
-        INFO("World %s already exists in the database (%i)", name.c_str(), query->getInt(0));
-        world->id = query->getInt(0);
-    } else {
-        INFO("World %s does not exist in the database, creating...", name.c_str());
-        DBQuery* insert = this->db->query("INSERT INTO worlds (name) VALUES (?)");
-        insert->bindText(name);
-        insert->execute();
-        world->id = insert->getLastInsertID();
-        insert->end();
-    }
-
-    query->end();
-
-    // Check if the world exists yet
-    if (this->worlds.count(world->id)) {
-        throw Exception("Failed to loadWorld, it's already loaded!");
+    // Make sure a world with this name is not already loaded
+    for (auto w : this->worlds) {
+        if (w.second->name == name) {
+            throw Exception("Failed to loadWorld, world with name already exists");
+        }
     }
 
     // Actually open and load the world
     world->open();
 
-    // Copy the types over
-    for (auto type : this->types) {
-        world->addBlockType(type.second);
-    }
+    // Set the world id
+    this->world_id_inc++;
+    world->id = this->world_id_inc;
 
     auto blk = world->get_block(Point(0, 0, 0));
 
@@ -171,6 +141,7 @@ void Server::loadWorld(std::string name) {
     }
 
     this->worlds[world->id] = world;
+    DEBUG("Server added world '%s' (%i).", world->name.c_str(), world->id);
 
     // TODO: Worlds should have their own update threads, we need to spawn
     //  that here.
@@ -189,15 +160,6 @@ void Server::loadDatabase() {
             "z INTEGER,"
             "world INTEGER,"
             "group_id INTEGER);", 0, 0, &errStr);
-
-    if (err != SQLITE_OK) {
-        ERROR("sqlite3_exec error: %s", errStr);
-        throw Exception("Failed to load the server sqlite database");
-    }
-
-    err = sqlite3_exec(db->db, "CREATE TABLE worlds ("
-            "id INTEGER PRIMARY KEY ASC,"
-            "name TEXT);", 0, 0, &errStr);
 
     if (err != SQLITE_OK) {
         ERROR("sqlite3_exec error: %s", errStr);
@@ -277,25 +239,37 @@ void Server::addClient(RemoteClient *remote) {
         remote->pos.y = query->getInt(2);
         remote->pos.z = query->getInt(3);
 
-        if (!this->worlds.count(query->getInt(4))) {
-            WARN("Player is in an unloaded world.");
-            throw Exception("TODO: load the world :/");
+        remote->world = nullptr;
+        std::string worldName = query->getText(4);
+        for (auto w : this->worlds) {
+            if (w.second->name == worldName) {
+                remote->world = w.second;
+            }
         }
 
-        remote->world = this->worlds[query->getInt(4)];
+        if (remote->world == nullptr) {
+            WARN("Player is in an unloaded world, placing them in default spawn");
+            throw Exception("TODO!");
+        }
     } else {
         INFO("Inserting new player for fingerprint %s.", remote->fingerprint.c_str());
-        DBQuery* insert = this->db->query("INSERT INTO players (fingerprint, username, group_id, world) VALUES (?, ?, ?, ?)");
+        DBQuery* insert = this->db->query(
+            "INSERT INTO players (fingerprint, username, group_id, world, x, y, z) VALUES (?, ?, ?, ?, ?, ?, ?)");
         insert->bindText(remote->fingerprint);
         insert->bindText(remote->username);
         insert->bindInt(0);
-        insert->bindInt(1);
+
+        // TODO: use spawn point
+        remote->pos = Point(0, 2, 0);
+        remote->world = this->worlds[1];
+
+        insert->bindText(remote->world->name);
+        insert->bindInt(remote->pos.x);
+        insert->bindInt(remote->pos.y);
+        insert->bindInt(remote->pos.z);
         insert->execute();
         remote->id = insert->getLastInsertID();
         insert->end();
-
-        // TODO: how do we decided the spawn point?
-        remote->pos = Point(0, 2, 0);
     }
 
     query->end();
@@ -307,32 +281,6 @@ void Server::addClient(RemoteClient *remote) {
     this->clients_mutex.unlock();
 }
 
-void Server::addBlockType(Terra::BlockType *type) {
-    if (this->types.count(type->name)) {
-        WARN("addBlockType replacing type %s", type->name.c_str());
-    }
-
-    this->types[type->name] = type;
-
-    // For each world,
-    for (auto world : this->worlds) {
-        world.second->addBlockType(type);
-    }
-}
-
-void Server::rmvBlockType(std::string type) {
-    this->types.erase(type);
-}
-
-Terra::BlockType* Server::getBlockType(std::string type) {
-    return this->types[type];
-}
-
-void Server::loadBaseTypes() {
-    this->addBlockType(new Terra::AirType());
-    this->addBlockType(new Terra::BedRockType());
-}
-
 RemoteClient::RemoteClient(Net::TCPServerClient *client, Server *server) {
     this->client = client;
     this->server = server;
@@ -340,6 +288,7 @@ RemoteClient::RemoteClient(Net::TCPServerClient *client, Server *server) {
 }
 
 RemoteClient::~RemoteClient() {
+    DEBUG("Destroying RemoteClient");
     if (id) {
         INFO("[%i] deregistering self in deconstructor", id);
         server->clients_mutex.lock();
@@ -391,6 +340,12 @@ void RemoteClient::parseData(muduo::string& data) {
             this->onPacketCompleteHandshake(inner);
             break;
         }
+        case ProtoNet::RequestRegion: {
+            ProtoNet::PacketRequestRegion inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketRequestRegion(inner);
+            break;
+        }
         default: {
             DEBUG("PACKET: %i, DATA-SIZE: %i", packet.type(), packet.data().size());
         }
@@ -409,6 +364,10 @@ void RemoteClient::sendPacket(ProtoNet::PacketType type, google::protobuf::Messa
     packet.set_type(type);
     packet.set_data(baseBuff);
     packet.SerializeToString(&headerBuff);
+
+    if (!this->client->alive()) {
+        throw Exception("Cannot send packet to a non-connected client!");
+    }
 
     this->client->send(headerBuff);
 }
@@ -438,7 +397,28 @@ void RemoteClient::sendBegin() {
     pkt.mutable_pos()->set_y(this->pos.y);
     pkt.mutable_pos()->set_z(this->pos.z);
     this->sendPacket(ProtoNet::Begin, &pkt);
+}
 
+void RemoteClient::sendRegion(Terra::World *world, BoundingBox b) {
+    ProtoNet::IRegion region;
+
+    region.set_world(world->id);
+    region.set_allocated_box(b.to_proto());
+
+    // Iterate over all the blocks in the region and add them to the packet
+    for (int x = b.min.x; x < b.max.x; x++) {
+        for (int y = b.min.y; y < b.max.y; y++) {
+            for (int z = b.min.z; z < b.max.z; z++) {
+                Terra::Block* blk = this->world->get_block(Point(x, y, z));
+                region.add_blocks(blk->type->id);
+            }
+        }
+    }
+
+    ProtoNet::PacketRegion pkt;
+    pkt.set_allocated_region(&region);
+    DEBUG("sending region");
+    this->sendPacket(ProtoNet::Region, &pkt);
 }
 
 void RemoteClient::onPacketError(ProtoNet::PacketError err) {
@@ -493,6 +473,13 @@ void RemoteClient::onPacketCompleteHandshake(ProtoNet::PacketCompleteHandshake p
 
     // TODO: send begin state
     this->sendBegin();
+}
+
+void RemoteClient::onPacketRequestRegion(ProtoNet::PacketRequestRegion pkt) {
+    DEBUG("Client has requested region...");
+    // TODO: validation
+    this->sendRegion(this->server->worlds[pkt.world_id()], BoundingBox(pkt.area()));
+
 }
 
 void RemoteClient::disconnect(DisconnectReason reason, const std::string text = "") {

@@ -118,6 +118,7 @@ class TCPServerClient : public TCPEventDispatcher {
         TCPServerClient(TCPServer*, const muduo::net::TcpConnectionPtr&);
 
         ~TCPServerClient() {
+            DEBUG("Destorying TCPServerClient");
             this->server->rmvClient(this);
         }
 
@@ -127,6 +128,10 @@ class TCPServerClient : public TCPEventDispatcher {
             muduo::Timestamp);
 
         void send(std::string);
+
+        bool alive() {
+            return conn->connected();
+        }
 };
 
 class TCPConnection : public TCPEventDispatcher {

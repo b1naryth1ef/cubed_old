@@ -139,6 +139,10 @@ int DBQuery::getInt(int dex) {
     return sqlite3_column_int(stmt, dex);
 }
 
+std::string DBQuery::getText(int dex) {
+    return std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, dex)));
+}
+
 DBQuery* DB::query(std::string sql) {
     std::string hash = hash_string(sql);
 

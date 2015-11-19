@@ -38,6 +38,7 @@ class DBQuery {
 
         // Grabbing data
         int getInt(int);
+        std::string getText(int);
 };
 
 class DB {

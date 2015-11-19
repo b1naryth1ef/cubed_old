@@ -122,6 +122,13 @@ void Client::sendCompleteHandshake(std::string password = "") {
     this->state = CLIENT_SENT_COMPLETION;
 }
 
+void Client::sendRequestRegion(BoundingBox b) {
+    ProtoNet::PacketRequestRegion pkt;
+    pkt.set_world_id(this->world->id);
+    pkt.set_allocated_area(b.to_proto());
+    this->sendPacket(ProtoNet::RequestRegion, &pkt);
+}
+
 void Client::parseData(muduo::string& data) {
     ProtoNet::Packet packet;
 
@@ -153,6 +160,12 @@ void Client::parseData(muduo::string& data) {
             ProtoNet::PacketBegin inner;
             inner.ParseFromArray(&innerBuff[0], innerBuff.size());
             this->onPacketBegin(inner);
+            break;
+        }
+        case ProtoNet::Region: {
+            ProtoNet::PacketRegion inner;
+            inner.ParseFromArray(&innerBuff[0], innerBuff.size());
+            this->onPacketRegion(inner);
             break;
         }
         default: {
@@ -193,7 +206,15 @@ void Client::onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake pkt) {
 
 void Client::onPacketBegin(ProtoNet::PacketBegin pkt) {
     // TODO: set position and world
-    INFO("BEGIN WORLD: %s", pkt.world().name().c_str());
+    this->world = new Terra::ClientWorld(pkt.world());
+    this->sendRequestRegion(BoundingBox(
+        Point(-12, 0, -12),
+        Point(12, 12, 12)));
+}
+
+void Client::onPacketRegion(ProtoNet::PacketRegion pkt) {
+    DEBUG("got region!");
+    // TODO: load this region into the block cache
 }
 
 void ClientConfig::load() {

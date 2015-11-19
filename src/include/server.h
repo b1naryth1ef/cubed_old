@@ -63,11 +63,13 @@ class RemoteClient {
         void sendError(ProtoNet::ErrorType, std::string);
         void sendAcceptHandshake();
         void sendBegin();
+        void sendRegion(Terra::World*, BoundingBox);
 
         // Packet handling helpers
         void onPacketError(ProtoNet::PacketError);
         void onPacketBeginHandshake(ProtoNet::PacketBeginHandshake);
         void onPacketCompleteHandshake(ProtoNet::PacketCompleteHandshake);
+        void onPacketRequestRegion(ProtoNet::PacketRequestRegion);
 
         void onTCPEvent(Net::TCPEvent&);
         void parseData(muduo::string&);
@@ -91,7 +93,7 @@ class ServerConfig {
         void load();
 };
 
-class Server {
+class Server : public Terra::BlockTypeHolder {
     private:
         uint64_t world_id_inc = 0;
 
@@ -101,9 +103,6 @@ class Server {
 
         // Loaded worlds
         std::map<uint16_t, Terra::World*> worlds;
-
-        // Holds all registered block types
-        Terra::BlockTypeCache types;
 
         // A mapping of connected clients
         std::mutex clients_mutex;
@@ -155,9 +154,6 @@ class Server {
         // Loads the server-database
         void loadDatabase();
 
-        // Loads the base types
-        void loadBaseTypes();
-
         // Shuts the server down
         void shutdown();
 
@@ -172,11 +168,6 @@ class Server {
 
         // Fired when CVarDict (this.cvars) has a change
         bool onCVarChange(CVar *, Container *);
-
-        // Manage block types
-        void addBlockType(Terra::BlockType*);
-        void rmvBlockType(std::string);
-        Terra::BlockType* getBlockType(std::string);
 
         void onTCPEvent(Net::TCPEvent&);
 

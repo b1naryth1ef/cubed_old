@@ -9,6 +9,7 @@ class Block;
 
 class BlockType {
     public:
+        uint32_t id;
         std::string name;
 
         // 0 = unbreakable, otherwise durability
@@ -74,6 +75,23 @@ class BedRockType : public StaticBlockType {
         }
 };
 
+typedef std::unordered_map<std::string, BlockType*> BlockTypeMapping;
+typedef std::unordered_map<uint32_t, BlockType*> BlockTypeCache;
+
+class BlockTypeHolder {
+    private:
+        uint32_t id_inc = 0;
+
+    public:
+        BlockTypeMapping types;
+        BlockTypeCache cache;
+
+        void loadBaseTypes();
+        void addBlockType(Terra::BlockType*);
+        void rmvBlockType(std::string);
+        bool haveType(std::string);
+        BlockType* getBlockType(std::string);
+};
 
 }
 

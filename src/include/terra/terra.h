@@ -21,6 +21,7 @@ class World;
 class Biome;
 class Block;
 class BlockType;
+class BlockTypeHolder;
 class WorldGenerator;
 
 // The base block in the world
@@ -41,7 +42,6 @@ class Block {
 
 // Define a mapping to hold Point-indexed blocks
 typedef std::unordered_map<Point, Block*, pointHashFunc, pointEqualsFunc> BlockCache;
-typedef std::map<std::string, BlockType*> BlockTypeCache;
 
 class World {
     private:
@@ -60,11 +60,11 @@ class World {
         void dump();
         void close();
 
-        // Map block type names to id's
-        std::map<std::string, uint32_t> block_type_mapping;
-
+        // Points to a generator for this world
         WorldGenerator *gen;
-        BlockTypeCache types;
+
+        // Points to the BlockTypeHolder for the server/client
+        BlockTypeHolder *holder;
 
         BlockCache blocks;
         std::vector<Biome *> biomes;
@@ -73,16 +73,19 @@ class World {
 
         void generateInitialWorld();
 
-        // Block types
-        uint32_t getNextBlockTypeID();
-        uint32_t getBlockTypeID(BlockType*);
-        void addBlockType(BlockType*);
-
         // Block based operations
         Block *get_block(Point);
         Block *create_block(Point, BlockType*);
         Block *create_block(Point, std::string);
         void save_block(Block*);
+};
+
+class ClientWorld {
+    public:
+        uint32_t id;
+        std::string name;
+        ClientWorld(ProtoNet::IWorld);
+
 };
 
 class Biome {

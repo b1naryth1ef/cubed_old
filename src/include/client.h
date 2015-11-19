@@ -4,6 +4,9 @@
 #include "net/tcp.h"
 
 #include "util/util.h"
+#include "util/geo.h"
+
+#include "terra/terra.h"
 
 #include "global.h"
 #include "renderer.h"
@@ -50,6 +53,12 @@ class Client {
         // The core TCP connection
         Net::TCPConnection *tcp;
 
+        // The current world
+        Terra::ClientWorld *world;
+
+        // Holds all registered block types
+        Terra::BlockTypeCache types;
+
         Window *main_window = nullptr;
 
         int session;
@@ -82,10 +91,12 @@ class Client {
         void onPacketError(ProtoNet::PacketError);
         void onPacketAcceptHandshake(ProtoNet::PacketAcceptHandshake);
         void onPacketBegin(ProtoNet::PacketBegin);
+        void onPacketRegion(ProtoNet::PacketRegion);
 
         // Utility methods for sending data over the wire
         void sendBeginHandshake();
         void sendCompleteHandshake(std::string);
+        void sendRequestRegion(BoundingBox);
 
         // General stateful settings
         bool setup();
@@ -95,4 +106,7 @@ class Client {
 
         // Connect to a server specified by a hoststring
         void connect(std::string);
+
+        // Manage block types
+
 };
