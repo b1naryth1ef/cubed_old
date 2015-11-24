@@ -8,8 +8,6 @@
 
 #include "rocksdb/db.h"
 
-#include "world.pb.h"
-
 using namespace rapidjson;
 
 namespace Terra {
